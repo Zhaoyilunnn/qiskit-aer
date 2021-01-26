@@ -1794,21 +1794,21 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
     omp_set_nested(1);
   }
 
-  // Set buffer chunks on device memory
-#ifdef AER_THRUST_CUDA
-  int num_buffers_device = AER_MAX_GPU_BUFFERS;
-  for (i = 0; i < m_nDevParallel; i++) {
-    m_Chunks[i].SetGlobalIndex(0);
-#ifdef AER_THRUST_CUDA
-    m_Chunks[i].SetDevice((m_iDev + i) % m_nDev);
-#else
-    m_Chunks[i].SetDevice(-1);
-#endif
-    m_Chunks[i].Allocate(0, num_buffers_device << m_maxChunkBits);
-    m_Chunks[i].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
-    m_Chunks[i].SetupP2P(m_nDevParallel);
-  }
-#endif
+//  // Set buffer chunks on device memory
+//#ifdef AER_THRUST_CUDA
+//  int num_buffers_device = AER_MAX_GPU_BUFFERS;
+//  for (i = 0; i < m_nDevParallel; i++) {
+//    m_Chunks[i].SetGlobalIndex(0);
+//#ifdef AER_THRUST_CUDA
+//    m_Chunks[i].SetDevice((m_iDev + i) % m_nDev);
+//#else
+//    m_Chunks[i].SetDevice(-1);
+//#endif
+//    m_Chunks[i].Allocate(0, num_buffers_device << m_maxChunkBits);
+//    m_Chunks[i].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
+//    m_Chunks[i].SetupP2P(m_nDevParallel);
+//  }
+//#endif
 
 
 #ifdef AER_TIMING
