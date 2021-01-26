@@ -1670,7 +1670,8 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   m_refPosition = data_size_;
   if (!data_)
     data_ = reinterpret_cast<std::complex<data_t>*>(malloc(sizeof(std::complex<data_t>)));  //data_ is only allocated to store reference value
-
+    
+  std::cout << "Number of Chunks (places): " << m_Chunks.size() << std::endl;
   // Free any currently assigned memory
   if(m_Chunks.size() > 0){
     if (prev_num_qubits != num_qubits_) {
@@ -1760,6 +1761,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
 #endif
 
   m_Chunks.resize(m_nDevParallel+1);
+  std::cout << "Number of Chunks (places) (after resize): " << m_Chunks.size() << std::endl;
   m_nPlaces = m_nDevParallel;
   m_iPlaceHost = -1;
 
@@ -1780,13 +1782,16 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   }
 
   is = 0;
-  if(is < (m_localSize >> m_maxChunkBits)){ //All chunks are stored on host memory
-    m_iPlaceHost = m_nDevParallel;
-    m_nPlaces = m_nDevParallel + 1;
+  std::cout << "Num Devices Parallel when allocating memory on device: " << m_nDevParallel << std::endl;
+
+  if(is < (m_localSize >> m_maxChunkBits)){ //all chunks are stored on host memory
+    // m_iPlaceHost = m_nDevParallel;
+    m_iPlaceHost = 0;
+    m_nPlaces = 1;  // statevector stored on Host memory
 
     m_Chunks[m_iPlaceHost].SetGlobalIndex(m_globalIndex + (is << m_maxChunkBits));
     m_Chunks[m_iPlaceHost].SetDevice(-1);
-    m_Chunks[m_iPlaceHost].Allocate(m_localSize,numBuffers << m_maxChunkBits);
+    m_Chunks[m_iPlaceHost].Allocate(m_localSize - (is << m_maxChunkBits),numBuffers << m_maxChunkBits);
     m_Chunks[m_iPlaceHost].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
     m_Chunks[m_iPlaceHost].SetupP2P(m_nDevParallel);
 
@@ -1794,21 +1799,21 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
     omp_set_nested(1);
   }
 
-//  // Set buffer chunks on device memory
-//#ifdef AER_THRUST_CUDA
-//  int num_buffers_device = AER_MAX_GPU_BUFFERS;
-//  for (i = 0; i < m_nDevParallel; i++) {
-//    m_Chunks[i].SetGlobalIndex(0);
-//#ifdef AER_THRUST_CUDA
-//    m_Chunks[i].SetDevice((m_iDev + i) % m_nDev);
-//#else
-//    m_Chunks[i].SetDevice(-1);
-//#endif
-//    m_Chunks[i].Allocate(0, num_buffers_device << m_maxChunkBits);
-//    m_Chunks[i].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
-//    m_Chunks[i].SetupP2P(m_nDevParallel);
-//  }
-//#endif
+  // Set buffer chunks on device memory
+#ifdef AER_THRUST_CUDA
+  int num_buffers_device = AER_MAX_GPU_BUFFERS;
+  for (i = 1; i < m_nDevParallel + 1; i++) {
+    m_Chunks[i].SetGlobalIndex(0);
+#ifdef AER_THRUST_CUDA
+    m_Chunks[i].SetDevice((m_iDev + i) % m_nDev);
+#else
+    m_Chunks[i].SetDevice(-1);
+#endif
+    m_Chunks[i].Allocate(0, num_buffers_device << m_maxChunkBits);
+    m_Chunks[i].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
+    m_Chunks[i].SetupP2P(m_nDevParallel);
+  }
+#endif
 
 
 #ifdef AER_TIMING
@@ -1840,209 +1845,6 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   }
 #endif
 }
-
-
-// template <typename data_t>
-// void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
-// {
-//   size_t prev_num_qubits = num_qubits_;
-//   num_qubits_ = num_qubits;
-//   data_size_ = 1ull << num_qubits;
-//   char* str;
-//   int i;
-// 
-// #ifdef AER_TIMING
-//   TimeReset();
-//   TimeStart(QS_GATE_INIT);
-// #endif
-//   if (checkpoint_) {
-//     free(checkpoint_);
-//     checkpoint_ = nullptr;
-//   }
-// 
-//   m_refPosition = data_size_;
-//   if (!data_)
-//     data_ = reinterpret_cast<std::complex<data_t>*>(malloc(sizeof(std::complex<data_t>)));  //data_ is only allocated to store reference value
-// 
-//   // Free any currently assigned memory
-//   if(m_Chunks.size() > 0){
-//     if (prev_num_qubits != num_qubits_) {
-//       m_Chunks.erase(m_Chunks.begin(),m_Chunks.end());
-//     }
-//   }
-// 
-//   int tid,nid;
-//   nid = omp_get_num_threads();
-//   tid = omp_get_thread_num();
-//   m_nDev = 1;
-// #ifdef AER_THRUST_CUDA
-//   if(cudaGetDeviceCount(&m_nDev) != cudaSuccess) m_nDev = 0;
-// #endif
-// 
-//   m_iDev = 0;
-//   if(nid > 1 && m_nDev > 0){
-//     m_iDev = tid % m_nDev;
-// #ifdef AER_THRUST_CUDA
-//     cudaSetDevice(m_iDev);
-// #endif
-//     m_nDevParallel = 1;
-//   }
-//   else{
-//     m_nDevParallel = 1;
-//     str = getenv("AER_MULTI_GPU");
-//     if(str != NULL){
-//       m_nDevParallel = m_nDev;
-//     }
-//   }
-// 
-//   str = getenv("AER_HOST_ONLY");
-//   if(str || m_nDev == 0){
-//     m_nDevParallel = 0;
-//   }
-// 
-//   //chunk setting
-//   int numBuffers = AER_MAX_BUFFERS;
-//   //uint_t numBuffers = 1;
-//   int numDummy = 2;
-//   m_maxChunkBits = AER_CHUNK_BITS;
-//   str = getenv("AER_CHUNK_BITS");
-//   if(str){
-//     m_maxChunkBits = atol(str);
-//   }
-// //  else if(m_nDevParallel <= 1){
-// //    m_maxChunkBits = num_qubits_;
-// //  }
-// 
-//   if(m_maxChunkBits > num_qubits_){
-//     m_maxChunkBits = num_qubits_;
-//     i = m_nDevParallel;
-//     while(i > 1){
-//       m_maxChunkBits--;
-//       i >>= 1;
-//     }
-//   }
-// 
-//   //currently using only one process
-//   m_globalSize = 1ull << num_qubits_;
-//   m_localSize = m_globalSize;
-//   m_globalIndex = 0;
-//   //--
-// 
-//   int fitOneGPU = 0;
-// 
-// #ifdef AER_THRUST_CUDA
-//   if(m_nDevParallel == 1){
-//     size_t freeMem,totalMem;
-//     cudaMemGetInfo(&freeMem,&totalMem);
-// 
-//     if(m_localSize < (freeMem / ((uint_t)sizeof(thrust::complex<data_t>) )) ){
-//       fitOneGPU = 1;
-//     }
-//     else{
-//       //need multiple GPUs
-//       if(nid <= 1){
-//         m_nDevParallel = m_nDev;
-//       }
-//     }
-//   }
-// #else
-//   //for OMP, TBB use 1 device
-//   fitOneGPU = 1;
-// 
-//   omp_set_nested(1);
-// #endif
-// 
-//   m_Chunks.resize(m_nDevParallel+1);
-//   m_nPlaces = m_nDevParallel;
-//   m_iPlaceHost = -1;
-// 
-//   uint_t is,ie,chunksOnDevice = m_localSize >> m_maxChunkBits;
-//   str = getenv("AER_TEST_HYBRID");  //use only for debugging
-//   if(str != NULL){
-//     chunksOnDevice = chunksOnDevice/2;
-//   }
-//   else if(fitOneGPU){
-//     m_maxChunkBits = num_qubits_;
-//   }
-// 
-//   if(m_maxChunkBits == num_qubits_){
-//     //no buffer needed for chunk exchange
-//     numBuffers = 0;
-//     numDummy = 0;
-//     chunksOnDevice = 1;
-//   }
-// 
-//   is = 0;
-//   for(i=0;i<m_nDevParallel;i++){
-//     ie = is + ((i + 1) * chunksOnDevice / m_nDevParallel) - (i * chunksOnDevice / m_nDevParallel);
-// 
-// #ifdef AER_THRUST_CUDA
-//     cudaSetDevice((m_iDev + i) % m_nDev);
-// 
-//     //check we can store chunks or not
-//     size_t freeMem,totalMem;
-//     cudaMemGetInfo(&freeMem,&totalMem);
-//     if(ie - is + numBuffers + numDummy >= (freeMem / ((uint_t)sizeof(thrust::complex<data_t>) << m_maxChunkBits)) ){
-//       ie = is + (freeMem / ((uint_t)sizeof(thrust::complex<data_t>) << m_maxChunkBits)) - numBuffers - numDummy;
-//     }
-// #endif
-// 
-//     m_Chunks[i].SetGlobalIndex(m_globalIndex + (is << m_maxChunkBits));
-// #ifdef AER_THRUST_CUDA
-//     m_Chunks[i].SetDevice((m_iDev + i) % m_nDev);
-// #else
-//     m_Chunks[i].SetDevice(-1);
-// #endif
-//     m_Chunks[i].Allocate((ie - is) << m_maxChunkBits,numBuffers << m_maxChunkBits);
-//     m_Chunks[i].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
-//     m_Chunks[i].SetupP2P(m_nDevParallel);
-// 
-//     is = ie;
-//   }
-// 
-//   if(is < (m_localSize >> m_maxChunkBits)){ //rest of chunks are stored on host memory
-//     m_iPlaceHost = m_nDevParallel;
-//     m_nPlaces = m_nDevParallel + 1;
-// 
-//     m_Chunks[m_iPlaceHost].SetGlobalIndex(m_globalIndex + (is << m_maxChunkBits));
-//     m_Chunks[m_iPlaceHost].SetDevice(-1);
-//     m_Chunks[m_iPlaceHost].Allocate(m_localSize - (is << m_maxChunkBits),numBuffers << m_maxChunkBits);
-//     m_Chunks[m_iPlaceHost].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
-//     m_Chunks[m_iPlaceHost].SetupP2P(m_nDevParallel);
-// 
-//     //Host execution uses nested parallelizm
-//     omp_set_nested(1);
-//   }
-// 
-// #ifdef AER_TIMING
-//   TimeEnd(QS_GATE_INIT);
-// #endif
-// 
-// 
-// #ifdef AER_DEBUG
-//   //TODO Migrate to SpdLog
-//   if(debug_fp == NULL && tid == 0){
-// //    char filename[1024];
-// //    sprintf(filename,"logs/debug_%d.txt",getpid());
-// //    debug_fp = fopen(filename,"a");
-//     debug_fp = stdout;
-// 
-//     fprintf(debug_fp," ==== Thrust qubit vector initialization %d qubits ====\n",num_qubits_);
-//     fprintf(debug_fp,"    TEST : threads %d/%d , dev %d/%d, using %d devices\n",tid,nid,m_iDev,m_nDev,m_nDevParallel);
-//     fprintf(debug_fp,"    TEST : max chunk bit = %d, %d/%d states, gid = %d , numBuffer = %d\n",m_maxChunkBits,m_localSize,m_globalSize,m_globalIndex,numBuffers);
-//     fprintf(debug_fp,"    TEST : ");
-//     for(i=0;i<m_nPlaces;i++){
-//       if(m_Chunks[i].DeviceID() >= 0){
-//         fprintf(debug_fp," [%d] %d ",m_Chunks[i].DeviceID(),m_Chunks[i].NumChunks(m_maxChunkBits));
-//       }
-//       else{
-//         fprintf(debug_fp," [Host] %d ",m_Chunks[i].NumChunks(m_maxChunkBits));
-//       }
-//     }
-//     fprintf(debug_fp,"\n");
-//   }
-// #endif
-// }
 
 template <typename data_t>
 void QubitVectorThrust<data_t>::allocate_buffers(int nq)
