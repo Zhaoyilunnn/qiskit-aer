@@ -403,7 +403,7 @@ public:
   int Allocate(uint_t size,uint_t bufferSize = 0);
   int AllocateParameters(int bits);
 
-  int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits);
+  int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits, int numChunks);
   int Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,int chunkBits);
 
   int CopyIn(const thrust::complex<data_t>* pVec,uint_t offset,uint_t chunkID,int chunkBits);
@@ -552,12 +552,13 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
 
 //copy chunk from other container to buffer
 template <typename data_t>
-int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits)
+int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chunks,uint_t src,
+                                           uint_t bufDest,int chunkBits, int numChunks)
 {
   uint_t srcPos,destPos,size;
   srcPos = src << chunkBits;
   destPos = m_size + (bufDest << chunkBits);
-  size = 1ull << chunkBits;
+  size = (1ull << chunkBits) * numChunks;
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
@@ -2456,7 +2457,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             chunkOffsets[i] = m_Chunks[iPlace].LocalChunkID(chunkIDs[i],chunkBits) << chunkBits;
           }
           else{
-            m_Chunks[iPlace].Get(m_Chunks[iPlaceSrc],m_Chunks[iPlaceSrc].LocalChunkID(chunkIDs[i],chunkBits),i,chunkBits);  //copy chunk from other place
+            m_Chunks[iPlace].Get(m_Chunks[iPlaceSrc],m_Chunks[iPlaceSrc].LocalChunkID(chunkIDs[i],chunkBits),i,chunkBits,1);  //copy chunk from other place
             chunkOffsets[i] = m_Chunks[iPlace].Size() + (i << chunkBits); //offset to buffer
           }
         }
