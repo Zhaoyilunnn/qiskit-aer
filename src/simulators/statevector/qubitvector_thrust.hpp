@@ -2247,7 +2247,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           ++iGPUBuffer;
         }
         if (iGPUBuffer % nGPUBuffer == 0 || iGPUBuffer == nTotalChunks) {
-          iGPUBuffer = 0;
           std::cout << "Executing On GPU..." << std::endl;
           // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
           //setting buffers
@@ -2270,6 +2269,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             std::cout << "Copying back to CPU ..." << std::endl;
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits);
+          
+          iGPUBuffer = 0;
           }
         }
       }
