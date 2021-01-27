@@ -2213,7 +2213,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int iPlaceCPU = 0;  // based on current memory allocation, CPU place id is 0
       int iGPUBuffer = 0;   // idx of GPU buffers
       int nTotalChunks = m_Chunks[iPlaceCPU].NumChunks(chunkBits); // Total Chunks on CPU
-      std::cout << "ChunkBits in this OP" << chunkBits << std::endl;
+      std::cout << "ChunkBits in this OP: " << chunkBits << std::endl;
       std::cout << "Num Chunks on Host memory: " << nTotalChunks << std::endl;
       uint_t localMask, baseChunk;
       reg_t offsets(nBuf);
