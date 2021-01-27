@@ -2207,7 +2207,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
-    if (iPlace != 0) { // currently only execute on GPU
+    if (iPlace == 0) {  // currently only execute on GPU
       std::cout << "Place: " << iPlace << std::endl;
       int nGPUBuffer = AER_MAX_GPU_BUFFERS;  // number of chunks that will be executed on GPU
       int iPlaceCPU = 0;  // based on current memory allocation, CPU place id is 0
