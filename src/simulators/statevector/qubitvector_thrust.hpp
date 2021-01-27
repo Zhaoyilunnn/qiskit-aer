@@ -2264,14 +2264,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
 
           //copy back
-          int nChunksOnGPU = iGPUBuffer == nTotalChunks ? (nTotalChunks % nGPUBuffer) : nGPUBuffer;
+          int nChunksOnGPU = (iChunk == nTotalChunks - 1) ? (nTotalChunks % nGPUBuffer) : nGPUBuffer;
           for (i = 0; i < nChunksOnGPU; i++) {
             std::cout << "Copying back to CPU ..." << std::endl;
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits);
-          
-          iGPUBuffer = 0;
           }
+          iGPUBuffer = 0;
         }
       }
     }
