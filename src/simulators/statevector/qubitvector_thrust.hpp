@@ -2248,6 +2248,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                iCurExeBuf, chunkBits);  //copy chunk from other place
           chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
           ++iGPUBuffer;
+          std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
         }
         if (iGPUBuffer % nGPUBuffer == 0 || iGPUBuffer == nTotalChunks) {
           std::cout << "Executing On GPU..." << std::endl;
