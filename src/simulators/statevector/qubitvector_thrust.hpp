@@ -2233,21 +2233,23 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           continue;
         }
 
+        int iCurExeBuf = 0;
         for (i = 0; i < nChunk; i++) {
-          chunkIDs[iGPUBuffer] = baseChunk;
+          iCurExeBuf = iGPUBuffer % nGPUBuffer;
+          chunkIDs[iCurExeBuf] = baseChunk;
           std::cout << "Base Chunk: " << baseChunk << std::endl;
           for (ib = 0; ib < nLarge; ib++) {
             if ((i >> ib) & 1) {
-              chunkIDs[iGPUBuffer] += (1ull << (large_qubits[ib] - chunkBits));
+              chunkIDs[iCurExeBuf] += (1ull << (large_qubits[ib] - chunkBits));
             }
           }
           std::cout << "Copying from CPU to GPU..." << std::endl;
-          m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iGPUBuffer], chunkBits),
-                               iGPUBuffer, chunkBits);  //copy chunk from other place
-          chunkOffsets[iGPUBuffer] = m_Chunks[iPlace].Size() + (iGPUBuffer << chunkBits);
+          m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
+                               iCurExeBuf, chunkBits);  //copy chunk from other place
+          chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
           ++iGPUBuffer;
         }
-        if (iGPUBuffer % nGPUBuffer == 0 || iGPUBuffer == nTotalChunks % nGPUBuffer) {
+        if (iGPUBuffer % nGPUBuffer == 0 || iGPUBuffer == nTotalChunks) {
           std::cout << "Executing On GPU..." << std::endl;
           // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
           //setting buffers
@@ -2265,13 +2267,12 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
 
           //copy back
-          int nChunksOnGPU = (iChunk == nTotalChunks - 1) ? (nTotalChunks % nGPUBuffer) : nGPUBuffer;
+          int nChunksOnGPU = (iGPUBuffer == nTotalChunks) ? (nTotalChunks % nGPUBuffer) : nGPUBuffer;
           for (i = 0; i < nChunksOnGPU; i++) {
             std::cout << "Copying back to CPU ..." << std::endl;
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits);
           }
-          iGPUBuffer = 0;
         }
       }
     }
