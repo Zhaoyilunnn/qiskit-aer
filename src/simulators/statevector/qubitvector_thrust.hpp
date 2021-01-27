@@ -2220,7 +2220,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     reg_t chunkOffsets(nGPUBuffer);
     reg_t chunkIDs(nGPUBuffer);
     std::vector<int> places(nGPUBuffer, iPlaceCPU);
-    size *= nGPUBuffer;  // increase execution parallelism
+    size *= (nGPUBuffer / nChunk);  // increase execution parallelism
 
     for (iChunk = 0; iChunk < nTotalChunks; iChunk++){
       baseChunk = GetBaseChunkID(m_Chunks[iPlaceCPU].ChunkID(iChunk,chunkBits),large_qubits,chunkBits);
