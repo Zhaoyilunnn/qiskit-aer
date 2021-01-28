@@ -79,7 +79,7 @@ double mysecond()
 
 #define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
-#define AER_MAX_GPU_BUFFERS   64
+#define AER_MAX_GPU_BUFFERS   16
 
 namespace AER {
 namespace QV {
@@ -1715,10 +1715,12 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   //uint_t numBuffers = 1;
   int numDummy = 2;
   m_maxChunkBits = AER_CHUNK_BITS;
+  std::cout << "Max Chunk Bits: " << m_maxChunkBits << std::endl;
   str = getenv("AER_CHUNK_BITS");
   if(str){
     m_maxChunkBits = atol(str);
   }
+  std::cout << "Max Chunk Bits after getting env: " << m_maxChunkBits << std::endl;
 //  else if(m_nDevParallel <= 1){
 //    m_maxChunkBits = num_qubits_;
 //  }
@@ -2143,7 +2145,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   //If no data exchange required execute along with all the state vectors
   if(m_nPlaces == 1 || func.IsDiagonal()){    //note: for multi-process m_nPlaces == 1 is not valid
     noDataExchange = 1;
-    chunkBits = num_qubits_;
+    // chunkBits = num_qubits_;
+    chunkBits = m_maxChunkBits;
   }
 
   //count number of qubits which is larger than chunk size
@@ -2157,7 +2160,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   if(nLarge == 0){
     noDataExchange = 1;
-    chunkBits = num_qubits_;
+    // chunkBits = num_qubits_;
+    chunkBits = m_maxChunkBits; // currently set as maxChunkBits for GPU execution group by group
   }
 
   if(func.IsDiagonal()){
