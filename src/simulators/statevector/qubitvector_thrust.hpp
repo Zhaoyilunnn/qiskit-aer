@@ -1787,8 +1787,8 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   std::cout << "Num Devices Parallel when allocating memory on device: " << m_nDevParallel << std::endl;
 
   if(is < (m_localSize >> m_maxChunkBits)){ //all chunks are stored on host memory
-    // m_iPlaceHost = m_nDevParallel;
-    m_iPlaceHost = 0;
+    m_iPlaceHost = m_nDevParallel;
+    // m_iPlaceHost = 0;
     m_nPlaces = 2;  // statevector stored on Host memory
 
     m_Chunks[m_iPlaceHost].SetGlobalIndex(m_globalIndex + (is << m_maxChunkBits));
@@ -1804,7 +1804,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   // Set buffer chunks on device memory
 #ifdef AER_THRUST_CUDA
   int num_buffers_device = AER_MAX_GPU_BUFFERS;
-  for (i = 1; i < m_nDevParallel + 1; i++) {
+  for (i = 0; i < m_nDevParallel; i++) {
     m_Chunks[i].SetGlobalIndex(0);
 #ifdef AER_THRUST_CUDA
     m_Chunks[i].SetDevice((m_iDev + i) % m_nDev);
@@ -2207,10 +2207,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
-    if (iPlace != 0) {  // currently only execute on GPU
+    if (iPlace < m_nPlaces - 1) {  // currently only execute on GPU
       std::cout << "Place: " << iPlace << std::endl;
       int nGPUBuffer = AER_MAX_GPU_BUFFERS;  // number of chunks that will be executed on GPU
-      int iPlaceCPU = 0;  // based on current memory allocation, CPU place id is 0
+      int iPlaceCPU = m_nPlaces - 1;  // based on current memory allocation, CPU place id is highest
       int iGPUBuffer = 0;   // idx of GPU buffers
       int nTotalChunks = m_Chunks[iPlaceCPU].NumChunks(chunkBits); // Total Chunks on CPU
       std::cout << "ChunkBits in this OP: " << chunkBits << std::endl;
