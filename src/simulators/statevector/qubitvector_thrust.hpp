@@ -1774,9 +1774,9 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   if(str != NULL){
     chunksOnDevice = chunksOnDevice/2;
   }
-  else if(fitOneGPU){
-    m_maxChunkBits = num_qubits_;
-  }
+//  else if(fitOneGPU){  // currently in this case we will not let m_maxChunkBits exceed 21
+//    m_maxChunkBits = num_qubits_;
+//  }
 
   if(m_maxChunkBits == num_qubits_){
     //no buffer needed for chunk exchange
