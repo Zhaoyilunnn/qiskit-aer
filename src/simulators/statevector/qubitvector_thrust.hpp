@@ -2141,6 +2141,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   //decreasing chunk-bits for fusion
   chunkBits = m_maxChunkBits - (N - 1);
+  std::cout << "Max Chunk bits: " << m_maxChunkBits << std::endl;
+  std::cout << "Num Qubits: " << chunkBits << std::endl;
 
   //If no data exchange required execute along with all the state vectors
   if(m_nPlaces == 1 || func.IsDiagonal()){    //note: for multi-process m_nPlaces == 1 is not valid
@@ -2163,6 +2165,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     // chunkBits = num_qubits_;
     chunkBits = m_maxChunkBits; // currently set as maxChunkBits for GPU execution group by group
   }
+  
+  std::cout << "Num Qubits: " << chunkBits << std::endl;
 
   if(func.IsDiagonal()){
     size = 1ull << chunkBits;
