@@ -2217,13 +2217,14 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int iPlaceCPU = m_nPlaces - 1;  // based on current memory allocation, CPU place id is highest
       int iGPUBuffer = 0;   // idx of GPU buffers
       int nTotalChunks = m_Chunks[iPlaceCPU].NumChunks(chunkBits); // Total Chunks on CPU
+      int iCurExeBuf = 0;  // buffer id that is being processing on GPU
       std::cout << "ChunkBits in this OP: " << chunkBits << std::endl;
       std::cout << "Num Chunks on Host memory: " << nTotalChunks << std::endl;
       uint_t localMask, baseChunk;
       reg_t offsets(nBuf);
       reg_t chunkOffsets(nGPUBuffer);
       reg_t chunkIDs(nGPUBuffer);
-      std::vector<int> places(nGPUBuffer, iPlaceCPU);
+      std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
       size *= (nGPUBuffer / nChunk);  // increase execution parallelism
 
       for (iChunk = 0; iChunk < nTotalChunks; iChunk++) {
@@ -2237,7 +2238,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           continue;
         }
 
-        int iCurExeBuf = 0;
         for (i = 0; i < nChunk; i++) {
           iCurExeBuf = iGPUBuffer % nGPUBuffer;
           chunkIDs[iCurExeBuf] = baseChunk;
@@ -2272,7 +2272,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
 
           //copy back
-          int nChunksOnGPU = (iGPUBuffer == nTotalChunks) ? (nTotalChunks % nGPUBuffer) : nGPUBuffer;
+          int nChunksOnGPU = iGPUBuffer % nGPUBuffer ? iGPUBuffer % nGPUBuffer : nGPUBuffer;
           for (i = 0; i < nChunksOnGPU; i++) {
             std::cout << "Copying back to CPU ..." << std::endl;
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
