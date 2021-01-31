@@ -2142,7 +2142,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   UpdateReferencedValue();
 
   //decreasing chunk-bits for fusion
-  chunkBits = m_maxChunkBits - (N - 1);
+  // chunkBits = m_maxChunkBits - (N - 1);
+  chunkBits = m_maxChunkBits;  // fix chunkBits, no need to decrease
   // std::cout << "Max Chunk bits: " << m_maxChunkBits << std::endl;
   // std::cout << "Num Qubits: " << chunkBits << std::endl;
 
