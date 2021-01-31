@@ -2235,6 +2235,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       size *= (nGPUBuffer / nChunk);  // increase execution parallelism
       int nChunksOnGPU = 0;  // num chunks that are active on GPU
 
+      noDataExchange = 0 // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
         for (iGPUBuffer = 0; iGPUBuffer < nTotalChunks; iGPUBuffer += nGPUBuffer) {
           // copy from H -> D
