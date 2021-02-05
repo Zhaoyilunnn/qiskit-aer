@@ -2288,7 +2288,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             ++iGPUBuffer;
             std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
           }
-          if (iGPUBuffer % nGPUBuffer == 0 || iGPUBuffer == nTotalChunks) {
+          if (iGPUBuffer % nGPUBuffer == 0 || iChunk == nTotalChunks) {
             std::cout << "Executing On GPU..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
             //setting buffers
