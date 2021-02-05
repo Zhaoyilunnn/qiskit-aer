@@ -2263,11 +2263,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               break;
             }
           }
-          m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
+          m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
           hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
           std::cout << "Buffer: " << iCurExeBuf << " has been written" << std::endl;
-          chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
+          chunkOffsets[iCurExeBuf] = m_Chunks[0].Size() + (iCurExeBuf << chunkBits);
           ++iGPUBuffer;
           std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
         }
