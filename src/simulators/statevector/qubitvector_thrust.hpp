@@ -2230,12 +2230,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
   int nChunksOnGPU = 0;  // num chunks that are active on GPU
 
+  std::cout << "Num Qubits: " << num_qubits_ << std::endl;
+  omp_threshold_ = 0;
 #pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
+    std::cout << "Place: " << iPlace << std::endl;
     if (iPlace == m_nPlaces - 1) {  // currently only execute on GPU
-      std::cout << "Place: " << iPlace << std::endl;
-
       for (iChunk = 0; iChunk < nTotalChunks; iChunk++) {
         baseChunk = GetBaseChunkID(m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits), large_qubits, chunkBits);
         if (baseChunk != m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits)) {  //already calculated
@@ -2271,7 +2272,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         }
       }
     } else { // another thread is responsible execution
-      std::cout << "Place: " << iPlace << std::endl;
       while (iGPUBuffer != nTotalChunks) {
         for (int idx_buf = 0; idx_buf < nGPUBuffer; idx_buf++) {
           if (!hasExeOnGPU[idx_buf]) {
