@@ -2271,6 +2271,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         }
       }
     } else { // another thread is responsible execution
+      std::cout << "Place: " << iPlace << std::endl;
       while (iGPUBuffer != nTotalChunks) {
         for (int idx_buf = 0; idx_buf < nGPUBuffer; idx_buf++) {
           if (!hasExeOnGPU[idx_buf]) {
