@@ -2310,7 +2310,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                    chunkBits, 1);
 #pragma omp atomic write
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
-
             }
             idx_buf += nChunk;
           }
@@ -2351,6 +2350,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             std::cout << "Copying back to CPU ..." << std::endl;
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1);
+#pragma omp atomic write
             hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
           }
           idx_buf += nChunk;
