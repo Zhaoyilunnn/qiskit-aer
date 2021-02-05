@@ -2229,15 +2229,19 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   reg_t hasExeOnGPU(nGPUBuffer, 1);     // whether we can copy to this buffer on GPU
   std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
   int nChunksOnGPU = 0;  // num chunks that are active on GPU
+  int iChunkCopy = 0;   // replicate of iChunk
 
   std::cout << "Num Qubits: " << num_qubits_ << std::endl;
   omp_threshold_ = 0;
-#pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(i,ib) shared(hasExeOnGPU) num_threads(m_nPlaces)
+#pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
     std::cout << "Place: " << iPlace << std::endl;
     if (iPlace == m_nPlaces - 1) {  // currently only execute on GPU
       for (iChunk = 0; iChunk < nTotalChunks; iChunk++) {
+#pragma omp atomic write
+        iChunkCopy = iChunk;
+
         baseChunk = GetBaseChunkID(m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits), large_qubits, chunkBits);
         if (baseChunk != m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits)) {  //already calculated
           continue;
@@ -2274,14 +2278,17 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
         }
       }
+#pragma omp atomic write
+      iChunkCopy = iChunk;
     } else { // another thread is responsible execution
-      while (iChunk != nTotalChunks) {
+      std::cout << "iChunkCopy: " << iChunkCopy << std::endl;
+      while (iChunkCopy != nTotalChunks) {
         int idx_buf = 0;
         while (idx_buf < nGPUBuffer) {
           bool canExecute = true;
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
             if (hasExeOnGPU[idx_eb]) {
-              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
+//              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
               canExecute = false;
               break;
             }
@@ -2323,7 +2330,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         bool canExecute = true;
         for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
           if (hasExeOnGPU[idx_eb]) {
-            std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
+//            std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
             canExecute = false;
             break;
           }
