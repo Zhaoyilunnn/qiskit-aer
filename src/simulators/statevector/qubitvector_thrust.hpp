@@ -2232,7 +2232,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   std::cout << "Num Qubits: " << num_qubits_ << std::endl;
   omp_threshold_ = 0;
-#pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(i,ib) num_threads(m_nPlaces)
+#pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(i,ib) shared(hasExeOnGPU) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
     std::cout << "Place: " << iPlace << std::endl;
@@ -2265,7 +2265,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
-          hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
+#pragma omp atomic write
+          {
+            hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
+          };
           std::cout << "Buffer: " << iCurExeBuf << " has been written" << std::endl;
           chunkOffsets[iCurExeBuf] = m_Chunks[0].Size() + (iCurExeBuf << chunkBits);
           ++iGPUBuffer;
@@ -2279,7 +2282,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           bool canExecute = true;
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
             if (hasExeOnGPU[idx_eb]) {
-              std::cout << "Buffer: " << iCurExeBuf << " has not been written" << std::endl;
+              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
               canExecute = false;
               break;
             }
@@ -2306,7 +2309,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               std::cout << "Copying back to CPU ..." << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1);
-              hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
+#pragma omp atomic write
+              {
+                hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
+              };
             }
             idx_buf += nChunk;
           }
@@ -2320,7 +2326,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         bool canExecute = true;
         for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
           if (hasExeOnGPU[idx_eb]) {
-            std::cout << "Buffer: " << iCurExeBuf << " has not been written" << std::endl;
+            std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
             canExecute = false;
             break;
           }
