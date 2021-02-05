@@ -2273,8 +2273,16 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       }
     } else { // another thread is responsible execution
       while (iGPUBuffer != nTotalChunks) {
-        for (int idx_buf = 0; idx_buf < nGPUBuffer; idx_buf++) {
-          if (!hasExeOnGPU[idx_buf]) {
+        int idx_buf = 0;
+        while (idx_buf < nGPUBuffer) {
+          bool canExecute = true;
+          for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
+            if (hasExeOnGPU[idx_eb]) {
+              canExecute = false;
+              break;
+            }
+          }
+          if (canExecute) {
             std::cout << "Executing On GPU..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
             //setting buffers
@@ -2298,6 +2306,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                    chunkBits, 1);
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
+            idx_buf += nChunk;
           }
         }
       }
