@@ -1123,7 +1123,7 @@ protected:
   // Config settings
   //----------------------------------------------------------------------- 
   uint_t omp_threads_ = 1;     // Disable multithreading by default
-  uint_t omp_threshold_ = 14;  // Qubit threshold for multithreading when enabled
+  mutable uint_t omp_threshold_ = 14;  // Qubit threshold for multithreading when enabled, temporally make it changeable
   int sample_measure_index_size_ = 10; // Sample measure indexing qubit size
   double json_chop_threshold_ = 0;  // Threshold for choping small values
                                     // in JSON serialization
