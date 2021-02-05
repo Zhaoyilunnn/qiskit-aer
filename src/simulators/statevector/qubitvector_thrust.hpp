@@ -2317,9 +2317,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       }
       // Check again to see if there are remained chunks to be executed
       int idx_buf = 0;
-      nGPUBuffer = nGPUBuffer % nTotalChunks ? nGPUBuffer % nTotalChunks : nGPUBuffer;
-      std::cout << "Rest GPU Buffers: " << nGPUBuffer << std::endl;
-      while (idx_buf < nGPUBuffer) {
+      int nBufferActive = nTotalChunks % nGPUBuffer ? nTotalChunks % nGPUBuffer : nGPUBuffer;
+      std::cout << "Rest GPU Buffers: " << nBufferActive << std::endl;
+      while (idx_buf < nBufferActive) {
         bool canExecute = true;
         for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
           if (hasExeOnGPU[idx_eb]) {
