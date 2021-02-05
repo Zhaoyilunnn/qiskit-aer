@@ -2125,6 +2125,7 @@ template <typename data_t>
 template <typename Function>
 double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubits) const
 {
+  std::cout << "=============================== Applying One Op start ==================================" << std::endl;
   const size_t N = qubits.size();
   const int numCBits = func.NumControlBits();
   uint_t size,iChunk,nChunk,controlMask,controlFlag;
@@ -2230,6 +2231,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
   int nChunksOnGPU = 0;  // num chunks that are active on GPU
   int iChunkCopy = 0;   // replicate of iChunk
+  bool hasCopyFinished = false;
 
   std::cout << "Num Qubits: " << num_qubits_ << std::endl;
   omp_threshold_ = 0;
@@ -2239,8 +2241,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     std::cout << "Place: " << iPlace << std::endl;
     if (iPlace == m_nPlaces - 1) {  // currently only execute on GPU
       for (iChunk = 0; iChunk < nTotalChunks; iChunk++) {
-#pragma omp atomic write
-        iChunkCopy = iChunk;
 
         baseChunk = GetBaseChunkID(m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits), large_qubits, chunkBits);
         if (baseChunk != m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits)) {  //already calculated
@@ -2278,11 +2278,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
         }
       }
-#pragma omp atomic write
-      iChunkCopy = iChunk;
+      hasCopyFinished = true;
+      std::cout << "Has finished Copy from H->D" << std::endl;
     } else { // another thread is responsible execution
       std::cout << "iChunkCopy: " << iChunkCopy << std::endl;
-      while (iChunkCopy != nTotalChunks) {
+      while (!hasCopyFinished) {
         int idx_buf = 0;
         while (idx_buf < nGPUBuffer) {
           bool canExecute = true;
@@ -2324,7 +2324,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       }
       // Check again to see if there are remained chunks to be executed
       int idx_buf = 0;
-      int nBufferActive = nTotalChunks % nGPUBuffer ? nTotalChunks % nGPUBuffer : nGPUBuffer;
+      int nBufferActive = nTotalChunks < nGPUBuffer ? nTotalChunks : nGPUBuffer;
       std::cout << "Rest GPU Buffers: " << nBufferActive << std::endl;
       while (idx_buf < nBufferActive) {
         bool canExecute = true;
