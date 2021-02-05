@@ -2215,80 +2215,65 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     controlFlag = controlMask;
   }
 
+  int nGPUBuffer = AER_MAX_GPU_BUFFERS;  // number of chunks that will be executed on GPU
+  int iPlaceCPU = m_nPlaces - 1;  // based on current memory allocation, CPU place id is highest
+  int iGPUBuffer = 0;   // idx of GPU buffers
+  int nTotalChunks = m_Chunks[iPlaceCPU].NumChunks(chunkBits); // Total Chunks on CPU
+  int iCurExeBuf = 0;  // buffer id that is being processing on GPU
+  std::cout << "ChunkBits in this OP: " << chunkBits << std::endl;
+  std::cout << "Num Chunks on Host memory: " << nTotalChunks << std::endl;
+  uint_t localMask, baseChunk;
+  reg_t offsets(nBuf);
+  reg_t chunkOffsets(nGPUBuffer);
+  reg_t chunkIDs(nGPUBuffer);
+  reg_t hasExeOnGPU(nGPUBuffer, 1);     // whether we can copy to this buffer on GPU
+  std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
+  int nChunksOnGPU = 0;  // num chunks that are active on GPU
+
 #pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
-    if (iPlace < m_nPlaces - 1) {  // currently only execute on GPU
+    if (iPlace == m_nPlaces - 1) {  // currently only execute on GPU
       std::cout << "Place: " << iPlace << std::endl;
-      int nGPUBuffer = AER_MAX_GPU_BUFFERS;  // number of chunks that will be executed on GPU
-      int iPlaceCPU = m_nPlaces - 1;  // based on current memory allocation, CPU place id is highest
-      int iGPUBuffer = 0;   // idx of GPU buffers
-      int nTotalChunks = m_Chunks[iPlaceCPU].NumChunks(chunkBits); // Total Chunks on CPU
-      int iCurExeBuf = 0;  // buffer id that is being processing on GPU
-      std::cout << "ChunkBits in this OP: " << chunkBits << std::endl;
-      std::cout << "Num Chunks on Host memory: " << nTotalChunks << std::endl;
-      uint_t localMask, baseChunk;
-      reg_t offsets(nBuf);
-      reg_t chunkOffsets(nGPUBuffer);
-      reg_t chunkIDs(nGPUBuffer);
-      std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
-      size *= (nGPUBuffer / nChunk);  // increase execution parallelism
-      int nChunksOnGPU = 0;  // num chunks that are active on GPU
 
-      noDataExchange = 0; // do not enable noDataExchange
-      if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
-        for (iGPUBuffer = 0; iGPUBuffer < nTotalChunks; iGPUBuffer += nGPUBuffer) {
-          // copy from H -> D
-          std::cout << "Copying from CPU to GPU..." << std::endl;
-          nChunksOnGPU = (iGPUBuffer + nGPUBuffer) > nTotalChunks ? nTotalChunks % nGPUBuffer : nGPUBuffer;
-          std::cout << "Active chunks on GPU: " << nChunksOnGPU << std::endl;
-          m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(iGPUBuffer, chunkBits),
-                               0, chunkBits, nChunksOnGPU);
-
-          std::cout << "Executing On GPU..." << std::endl;
-          // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
-          //setting buffers
-          localMask = 0;
-          //execute kernel
-          bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
-          if (func.Reduction())
-            ret += m_Chunks[iPlace].ExecuteSum(offsetBase, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
-          else
-            m_Chunks[iPlace].Execute(offsetBase, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
-          // copy from D -> H
-          std::cout << "Copying back to CPU ..." << std::endl;
-          m_Chunks[iPlace].Put(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(iGPUBuffer, chunkBits), 0,
-                               chunkBits, nChunksOnGPU);
+      for (iChunk = 0; iChunk < nTotalChunks; iChunk++) {
+        baseChunk = GetBaseChunkID(m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits), large_qubits, chunkBits);
+        if (baseChunk != m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits)) {  //already calculated
+          continue;
         }
-      } else { // copy chunk one-by-one
-        for (iChunk = 0; iChunk < nTotalChunks; iChunk++) {
-          baseChunk = GetBaseChunkID(m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits), large_qubits, chunkBits);
-          if (baseChunk != m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits)) {  //already calculated
-            continue;
-          }
 
-          //control mask
-          if ((baseChunk & controlMask) != controlFlag) {
-            continue;
-          }
+        //control mask
+        if ((baseChunk & controlMask) != controlFlag) {
+          continue;
+        }
 
-          for (i = 0; i < nChunk; i++) {
-            iCurExeBuf = iGPUBuffer % nGPUBuffer;
-            chunkIDs[iCurExeBuf] = baseChunk;
-            std::cout << "Base Chunk: " << baseChunk << std::endl;
-            for (ib = 0; ib < nLarge; ib++) {
-              if ((i >> ib) & 1) {
-                chunkIDs[iCurExeBuf] += (1ull << (large_qubits[ib] - chunkBits));
-              }
+        for (i = 0; i < nChunk; i++) {
+          iCurExeBuf = iGPUBuffer % nGPUBuffer;
+          chunkIDs[iCurExeBuf] = baseChunk;
+          std::cout << "Base Chunk: " << baseChunk << std::endl;
+          for (ib = 0; ib < nLarge; ib++) {
+            if ((i >> ib) & 1) {
+              chunkIDs[iCurExeBuf] += (1ull << (large_qubits[ib] - chunkBits));
             }
-            std::cout << "Copying from CPU to GPU..." << std::endl;
-            m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
-                                 iCurExeBuf, chunkBits, 1);  //copy chunk from other place
-            chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
-            ++iGPUBuffer;
-            std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
           }
-          if (iGPUBuffer % nGPUBuffer == 0 || iGPUBuffer == nTotalChunks) {
+          std::cout << "Copying from CPU to GPU..." << std::endl;
+          while (true) { // check whether we can copy to this chunk
+            if (hasExeOnGPU[iCurExeBuf]) {
+              break;
+            }
+          }
+          m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
+                               iCurExeBuf, chunkBits, 1);  //copy chunk from other place
+          hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
+          chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
+          ++iGPUBuffer;
+          std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
+        }
+      }
+    } else { // another thread is responsible execution
+      while (iGPUBuffer != nTotalChunks) {
+        for (int idx_buf = 0; idx_buf < nGPUBuffer; idx_buf++) {
+          if (!hasExeOnGPU[idx_buf]) {
             std::cout << "Executing On GPU..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
             //setting buffers
@@ -2301,17 +2286,45 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             //execute kernel
             bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
             if (func.Reduction())
-              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
+              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size, m_Chunks[iPlace].Size()+idx_buf, localMask, enable_omp);
             else
-              m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
+              m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size()+idx_buf, localMask, enable_omp);
 
             //copy back
-            nChunksOnGPU = iGPUBuffer % nGPUBuffer ? iGPUBuffer % nGPUBuffer : nGPUBuffer;
-            for (i = 0; i < nChunksOnGPU; i++) {
+            for (i = idx_buf; i < idx_buf + nChunk; i++) {
               std::cout << "Copying back to CPU ..." << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1);
+              hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
+          }
+        }
+      }
+      // Check again to see if there are remained
+      for (int idx_buf = 0; idx_buf < nGPUBuffer; idx_buf++) {
+        if (!hasExeOnGPU[idx_buf]) {
+          std::cout << "Executing On GPU..." << std::endl;
+          // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
+          //setting buffers
+          localMask = 0;
+          for (ib = 0; ib < nBuf; ib++) {
+            offsets[ib] = chunkOffsets[buf2chunk[ib]] + offsetBase[ib];
+            localMask |= (1ull << ib); //currently all buffers are local
+          }
+
+          //execute kernel
+          bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
+          if (func.Reduction())
+            ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size, m_Chunks[iPlace].Size()+idx_buf, localMask, enable_omp);
+          else
+            m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size()+idx_buf, localMask, enable_omp);
+
+          //copy back
+          for (i = idx_buf; i < idx_buf + nChunk; i++) {
+            std::cout << "Copying back to CPU ..." << std::endl;
+            m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), idx_buf,
+                                 chunkBits, 1);
+            hasExeOnGPU[idx_buf] = 1;
           }
         }
       }
