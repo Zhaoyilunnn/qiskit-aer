@@ -2310,9 +2310,17 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
         }
       }
-      // Check again to see if there are remained
-      for (int idx_buf = 0; idx_buf < nGPUBuffer; idx_buf++) {
-        if (!hasExeOnGPU[idx_buf]) {
+      // Check again to see if there are remained chunks to be executed
+      int idx_buf = 0;
+      while (idx_buf < nGPUBuffer) {
+        bool canExecute = true;
+        for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
+          if (hasExeOnGPU[idx_eb]) {
+            canExecute = false;
+            break;
+          }
+        }
+        if (canExecute) {
           std::cout << "Executing On GPU..." << std::endl;
           // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
           //setting buffers
@@ -2332,10 +2340,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           //copy back
           for (i = idx_buf; i < idx_buf + nChunk; i++) {
             std::cout << "Copying back to CPU ..." << std::endl;
-            m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), idx_buf,
+            m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1);
-            hasExeOnGPU[idx_buf] = 1;
+            hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
           }
+          idx_buf += nChunk;
         }
       }
     }
