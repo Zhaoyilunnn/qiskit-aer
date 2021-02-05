@@ -2232,7 +2232,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   std::cout << "Num Qubits: " << num_qubits_ << std::endl;
   omp_threshold_ = 0;
-#pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
+#pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(i,ib) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
     std::cout << "Place: " << iPlace << std::endl;
@@ -2273,7 +2273,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         }
       }
     } else { // another thread is responsible execution
-      while (iGPUBuffer != nTotalChunks) {
+      while (iChunk != nTotalChunks) {
         int idx_buf = 0;
         while (idx_buf < nGPUBuffer) {
           bool canExecute = true;
