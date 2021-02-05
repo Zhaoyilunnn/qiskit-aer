@@ -2266,6 +2266,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
           hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
+          std::cout << "Buffer: " << iCurExeBuf << " has been written" << std::endl;
           chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
           ++iGPUBuffer;
           std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
@@ -2278,6 +2279,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           bool canExecute = true;
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
             if (hasExeOnGPU[idx_eb]) {
+              std::cout << "Buffer: " << iCurExeBuf << " has not been written" << std::endl;
               canExecute = false;
               break;
             }
@@ -2312,10 +2314,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       }
       // Check again to see if there are remained chunks to be executed
       int idx_buf = 0;
+      nGPUBuffer = nGPUBuffer % nTotalChunks ? nGPUBuffer % nTotalChunks : nGPUBuffer;
+      std::cout << "Rest GPU Buffers: " << nGPUBuffer << std::endl;
       while (idx_buf < nGPUBuffer) {
         bool canExecute = true;
         for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
           if (hasExeOnGPU[idx_eb]) {
+            std::cout << "Buffer: " << iCurExeBuf << " has not been written" << std::endl;
             canExecute = false;
             break;
           }
