@@ -2273,7 +2273,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           for (auto flag : hasExeOnGPU) {
             std::cout << flag << " ";
           }
-          std::cout << endl;
+          std::cout << std::endl;
 
           std::cout << "Buffer: " << iCurExeBuf << " has been written" << std::endl;
           chunkOffsets[iCurExeBuf] = m_Chunks[0].Size() + (iCurExeBuf << chunkBits);
@@ -2324,7 +2324,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             for (auto flag : hasExeOnGPU) {
               std::cout << flag << " ";
             }
-            std::cout << endl;
+            std::cout << std::endl;
 
           }
           idx_buf += nChunk;
