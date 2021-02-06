@@ -2263,6 +2263,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
           std::cout << "Copying from CPU to GPU..." << std::endl;
           while (!hasExeOnGPU[iCurExeBuf]) { // check whether we can copy to this chunk
+            std::cout << "Waiting chunk " << iCurExeBuf << " to be executed ..." << std::endl;
             continue;
           }
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
