@@ -2278,7 +2278,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
         }
       }
-#pragma omp atomic write
       hasCopyFinished = true;
       std::cout << "Has finished Copy from H->D" << std::endl;
     } else { // another thread is responsible execution
