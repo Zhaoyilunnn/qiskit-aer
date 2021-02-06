@@ -2281,7 +2281,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       hasCopyFinish = true;
       std::cout << "Has finished Copy from H->D" << std::endl;
     } else { // another thread is responsible execution
-      int iExecuted = 0;
       while (!hasCopyFinish) {
         int idx_buf = 0;
         while (idx_buf < nGPUBuffer) {
@@ -2318,7 +2317,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               #pragma omp atomic write
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
-            iExecuted += nChunk;
             std::cout << "Has executed " << iExecuted << " chunks on GPU" << std::endl;
           }
           idx_buf += nChunk;
