@@ -2266,7 +2266,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic read
           flag = hasExeOnGPU[iCurExeBuf];
           if (!flag) { // check whether we can copy to this chunk
-            std::cout << "Waiting chunk " << iCurExeBuf << " to be executed ..." << std::endl;
+//            std::cout << "Waiting chunk " << iCurExeBuf << " to be executed ..." << std::endl;
             continue;
           }
           std::cout << "Copying from CPU to GPU..." << std::endl;
@@ -2301,7 +2301,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         while (idx_buf < nGPUBuffer && !hasCpuCopyFinish) {
 #pragma omp atomic read
           hasCpuCopyFinish = hasCopyFinish;
-          std::cout << "hasCpuCopyFinish: " << hasCpuCopyFinish << std::endl;
+//          std::cout << "hasCpuCopyFinish: " << hasCpuCopyFinish << std::endl;
 
           bool canExecute = true;
 
@@ -2310,7 +2310,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic read
             flag = hasExeOnGPU[idx_eb];
             if (flag) {
-              std::cout << "Waiting buffer " << idx_eb << " to be copied" << std::endl;
+//              std::cout << "Waiting buffer " << idx_eb << " to be copied" << std::endl;
               canExecute = false;
               break;
             }
