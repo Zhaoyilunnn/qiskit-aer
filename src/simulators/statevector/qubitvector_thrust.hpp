@@ -2228,7 +2228,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   reg_t offsets(nBuf);
   reg_t chunkOffsets(nGPUBuffer);
   reg_t chunkIDs(nGPUBuffer);
-  reg_t hasExeOnGPU(nGPUBuffer, 1);     // whether we can copy to this buffer on GPU
+//  reg_t hasExeOnGPU(nGPUBuffer, 1);     // whether we can copy to this buffer on GPU
+  int hasExeOnGPU[AER_MAX_GPU_BUFFERS] = {1};
   std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
   int nChunksOnGPU = 0;  // num chunks that are active on GPU
   int hasCopyFinish = 0;
@@ -2277,7 +2278,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
 #pragma omp atomic write
-          hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
+          *(hasExeOnGPU + iCurExeBuf) = 0;
+//          hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
 
           for (auto flag : hasExeOnGPU) {
             std::cout << flag << " ";
@@ -2342,7 +2344,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1);
 #pragma omp atomic write
-              hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
+              *(hasExeOnGPU + idx_buf) = 1;
+//              hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
 
             for (auto flag : hasExeOnGPU) {
@@ -2393,7 +2396,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1);
 #pragma omp atomic write
-            hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
+            *(hasExeOnGPU + idx_buf) = 1;
+//            hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
           }
           for (auto flag : hasExeOnGPU) {
             std::cout << flag << " ";
