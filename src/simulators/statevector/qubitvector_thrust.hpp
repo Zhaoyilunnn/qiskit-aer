@@ -2317,6 +2317,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
             iExecuted += nChunk;
+            std::cout << "Has executed " << iExecuted << " chunks on GPU" << std::endl;
           }
           idx_buf += nChunk;
         }
