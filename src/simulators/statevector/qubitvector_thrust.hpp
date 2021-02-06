@@ -2330,8 +2330,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             }
             std::cout << std::endl;
 
+            idx_buf += nChunk;
           }
-          idx_buf += nChunk;
         }
       }
     }
