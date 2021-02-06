@@ -2251,12 +2251,12 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         if ((baseChunk & controlMask) != controlFlag) {
           continue;
         }
+        std::cout << "Base Chunk: " << baseChunk << std::endl;
 
         i = 0;
         while (i < nChunk) {
           iCurExeBuf = iGPUBuffer % nGPUBuffer;
           chunkIDs[iCurExeBuf] = baseChunk;
-          std::cout << "Base Chunk: " << baseChunk << std::endl;
           for (ib = 0; ib < nLarge; ib++) {
             if ((i >> ib) & 1) {
               chunkIDs[iCurExeBuf] += (1ull << (large_qubits[ib] - chunkBits));
