@@ -2292,8 +2292,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic write
       hasCopyFinish = 1;
     } else { // another thread is responsible execution
+      int hasCpuCopyFinish = 0;
 #pragma omp atomic read
-      int hasCpuCopyFinish = hasCopyFinish;
+      hasCpuCopyFinish = hasCopyFinish;
       while (!hasCpuCopyFinish) {
 #pragma omp atomic read
         hasCpuCopyFinish = hasCopyFinish;
