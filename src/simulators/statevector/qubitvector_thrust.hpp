@@ -2279,11 +2279,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic write
           hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
 
-          for (auto flag : hasExeOnGPU) {
-            std::cout << flag << " ";
-          }
-          std::cout << std::endl;
-
           std::cout << "Buffer: " << iCurExeBuf << " has been written" << std::endl;
           chunkOffsets[iCurExeBuf] = m_Chunks[0].Size() + (iCurExeBuf << chunkBits);
           ++iGPUBuffer;
@@ -2344,12 +2339,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic write
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
-
-            for (auto flag : hasExeOnGPU) {
-              std::cout << flag << " ";
-            }
-            std::cout << std::endl;
-
+          
             idx_buf += nChunk;
           }
         }
@@ -2365,7 +2355,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic read
           flag = hasExeOnGPU[idx_eb];
           if (flag) {
-            std::cout << "Waiting buffer " << idx_eb << " to be copied" << std::endl;
             canExecute = false;
             break;
           }
@@ -2395,10 +2384,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic write
             hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
           }
-          for (auto flag : hasExeOnGPU) {
-            std::cout << flag << " ";
-          }
-          std::cout << std::endl;
         }
         idx_buf += nChunk;  // here we traverse chunks sequentially
       }
