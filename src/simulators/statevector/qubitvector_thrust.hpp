@@ -2276,8 +2276,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           std::cout << "Copying from CPU to GPU..." << std::endl;
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
-#pragma omp atomic write
-          hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
+//#pragma omp atomic write
+//          hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
 
           for (auto flag : hasExeOnGPU) {
             std::cout << flag << " ";
@@ -2336,10 +2336,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             else
               m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size()+idx_buf, localMask, enable_omp);
 
-            for (i = idx_buf; i < idx_buf + nChunk; i++) {
-#pragma omp atomic write
-              hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
-            }
+//            for (i = idx_buf; i < idx_buf + nChunk; i++) {
+//#pragma omp atomic write
+//              hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
+//            }
 
             //copy back
             for (i = idx_buf; i < idx_buf + nChunk; i++) {
@@ -2390,10 +2390,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           else
             m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size()+idx_buf, localMask, enable_omp);
 
-          for (i = idx_buf; i < idx_buf + nChunk; i++) {
-#pragma omp atomic write
-            hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
-          }
+//          for (i = idx_buf; i < idx_buf + nChunk; i++) {
+//#pragma omp atomic write
+//            hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
+//          }
           //copy back
           for (i = idx_buf; i < idx_buf + nChunk; i++) {
             std::cout << "Copying back to CPU ..." << std::endl;
