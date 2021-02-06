@@ -2262,11 +2262,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               chunkIDs[iCurExeBuf] += (1ull << (large_qubits[ib] - chunkBits));
             }
           }
-          std::cout << "Copying from CPU to GPU..." << std::endl;
-          if (!hasExeOnGPU[iCurExeBuf]) { // check whether we can copy to this chunk
+#pragma omp atomic read
+          int flag = hasExeOnGPU[iCurExeBuf];
+          if (flag) { // check whether we can copy to this chunk
             std::cout << "Waiting chunk " << iCurExeBuf << " to be executed ..." << std::endl;
             continue;
           }
+          std::cout << "Copying from CPU to GPU..." << std::endl;
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
 #pragma omp atomic write
@@ -2294,7 +2296,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           bool canExecute = true;
 
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
-            if (hasExeOnGPU[idx_eb]) {
+#pragma omp atomic read
+            int flag = hasExeOnGPU[idx_eb];
+            if (flag) {
               std::cout << "Waiting buffer " << idx_eb << " to be copied" << std::endl;
               canExecute = false;
               break;
@@ -2341,7 +2345,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         bool canExecute = true;
 
         for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
-          if (hasExeOnGPU[idx_eb]) {
+#pragma omp atomic read
+          int flag = hasExeOnGPU[idx_eb];
+          if (flag) {
             std::cout << "Waiting buffer " << idx_eb << " to be copied" << std::endl;
             canExecute = false;
             break;
