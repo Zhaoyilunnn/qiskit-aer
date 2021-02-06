@@ -2252,7 +2252,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           continue;
         }
 
-        for (i = 0; i < nChunk; i++) {
+        i = 0;
+        while (i < nChunk) {
           iCurExeBuf = iGPUBuffer % nGPUBuffer;
           chunkIDs[iCurExeBuf] = baseChunk;
           std::cout << "Base Chunk: " << baseChunk << std::endl;
@@ -2262,7 +2263,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             }
           }
           std::cout << "Copying from CPU to GPU..." << std::endl;
-          while (!hasExeOnGPU[iCurExeBuf]) { // check whether we can copy to this chunk
+          if (!hasExeOnGPU[iCurExeBuf]) { // check whether we can copy to this chunk
             std::cout << "Waiting chunk " << iCurExeBuf << " to be executed ..." << std::endl;
             continue;
           }
@@ -2280,6 +2281,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           chunkOffsets[iCurExeBuf] = m_Chunks[0].Size() + (iCurExeBuf << chunkBits);
           ++iGPUBuffer;
           std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
+
+          ++i;
         }
       }
       hasCopyFinish = true;
