@@ -2296,11 +2296,12 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic read
       hasCpuCopyFinish = hasCopyFinish;
       while (!hasCpuCopyFinish) {
-#pragma omp atomic read
-        hasCpuCopyFinish = hasCopyFinish;
-        std::cout << "hasCpuCopyFinish: " << hasCpuCopyFinish << std::endl;
+
         int idx_buf = 0;
         while (idx_buf < nGPUBuffer && !hasCpuCopyFinish) {
+#pragma omp atomic read
+          hasCpuCopyFinish = hasCopyFinish;
+          std::cout << "hasCpuCopyFinish: " << hasCpuCopyFinish << std::endl;
 
           bool canExecute = true;
 
