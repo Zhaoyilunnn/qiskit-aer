@@ -2223,6 +2223,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   int iCurExeBuf = 0;  // buffer id that is being processing on GPU
   std::cout << "ChunkBits in this OP: " << chunkBits << std::endl;
   std::cout << "Num Chunks on Host memory: " << nTotalChunks << std::endl;
+  std::cout << "Involved " << nChunk << " chunks" << std::endl;
   uint_t localMask, baseChunk;
   reg_t offsets(nBuf);
   reg_t chunkOffsets(nGPUBuffer);
