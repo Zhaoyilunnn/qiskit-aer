@@ -2265,7 +2265,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           int flag = 0;
 #pragma omp atomic read
           flag = hasExeOnGPU[iCurExeBuf];
-          if (flag) { // check whether we can copy to this chunk
+          if (!flag) { // check whether we can copy to this chunk
             std::cout << "Waiting chunk " << iCurExeBuf << " to be executed ..." << std::endl;
             continue;
           }
