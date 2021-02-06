@@ -2318,8 +2318,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic write
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
-            idx_buf += nChunk;
           }
+          idx_buf += nChunk;
         }
       }
       // Check again to see if there are remained chunks to be executed
@@ -2360,8 +2360,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic write
             hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
           }
-          idx_buf += nChunk;
         }
+        idx_buf += nChunk;
       }
     }
   }
