@@ -2265,10 +2265,14 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           int flag = 0;
 #pragma omp atomic read
           flag = hasExeOnGPU[iCurExeBuf];
-          if (!flag) { // check whether we can copy to this chunk
-//            std::cout << "Waiting chunk " << iCurExeBuf << " to be executed ..." << std::endl;
+          if (i == 0 && !flag) {
+            iGPUBuffer += nChunk;
             continue;
           }
+          /*if (!flag) { // check whether we can copy to this chunk
+            std::cout << "Waiting chunk " << iCurExeBuf << " to be executed ..." << std::endl;
+            continue;
+          }*/
           std::cout << "Copying from CPU to GPU..." << std::endl;
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
