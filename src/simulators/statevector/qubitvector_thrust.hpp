@@ -2300,7 +2300,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         hasCpuCopyFinish = hasCopyFinish;
         std::cout << "hasCpuCopyFinish: " << hasCpuCopyFinish << std::endl;
         int idx_buf = 0;
-        while (idx_buf < nGPUBuffer) {
+        while (idx_buf < nGPUBuffer && !hasCpuCopyFinish) {
+
           bool canExecute = true;
 
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
