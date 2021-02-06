@@ -2294,6 +2294,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp atomic read
       int hasCpuCopyFinish = hasCopyFinish;
       while (!hasCpuCopyFinish) {
+#pragma omp atomic read
+        hasCpuCopyFinish = hasCopyFinish;
         int idx_buf = 0;
         while (idx_buf < nGPUBuffer) {
           bool canExecute = true;
