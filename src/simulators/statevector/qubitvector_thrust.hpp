@@ -2295,7 +2295,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
             if (hasExeOnGPU[idx_eb]) {
-//              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
+              std::cout << "Waiting buffer " << idx_eb << " to be copied" << std::endl;
               canExecute = false;
               break;
             }
@@ -2342,7 +2342,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
         for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
           if (hasExeOnGPU[idx_eb]) {
-//              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
+            std::cout << "Waiting buffer " << idx_eb << " to be copied" << std::endl;
             canExecute = false;
             break;
           }
