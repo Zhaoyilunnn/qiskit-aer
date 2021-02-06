@@ -2261,11 +2261,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             }
           }
           std::cout << "Copying from CPU to GPU..." << std::endl;
-          while (true) { // check whether we can copy to this chunk
-            if (hasExeOnGPU[iCurExeBuf]) {
-              break;
-            }
-//            std::cout << "Waiting GPU finish execution ..." << std::endl;
+          while (!hasExeOnGPU[iCurExeBuf]) { // check whether we can copy to this chunk
+            continue;
           }
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
@@ -2317,7 +2314,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               #pragma omp atomic write
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
-            std::cout << "Has executed " << iExecuted << " chunks on GPU" << std::endl;
           }
           idx_buf += nChunk;
         }
