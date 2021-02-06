@@ -2304,16 +2304,16 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           bool canExecute = true;
 
-          for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
-            int flag = 0;
-#pragma omp atomic read
-            flag = hasExeOnGPU[idx_eb];
-            if (flag) {
+//          for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
+//            int flag = 0;
+//#pragma omp atomic read
+//            flag = hasExeOnGPU[idx_eb];
+//            if (flag) {
 //              std::cout << "Waiting buffer " << idx_eb << " to be copied" << std::endl;
-              canExecute = false;
-              break;
-            }
-          }
+//              canExecute = false;
+//              break;
+//            }
+//          }
           if (canExecute) {
             std::cout << "Executing On GPU..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
