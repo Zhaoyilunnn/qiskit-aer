@@ -2230,6 +2230,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   reg_t hasExeOnGPU(nGPUBuffer, 1);     // whether we can copy to this buffer on GPU
   std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
   int nChunksOnGPU = 0;  // num chunks that are active on GPU
+  bool hasCopyFinish = false;
 
   std::cout << "Num Qubits: " << num_qubits_ << std::endl;
   omp_threshold_ = 0;
@@ -2277,10 +2278,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
         }
       }
+      hasCopyFinish = true;
       std::cout << "Has finished Copy from H->D" << std::endl;
     } else { // another thread is responsible execution
       int iExecuted = 0;
-      while (iExecuted < nTotalChunks) {
+      while (!hasCopyFinish) {
         int idx_buf = 0;
         while (idx_buf < nGPUBuffer) {
           bool canExecute = true;
