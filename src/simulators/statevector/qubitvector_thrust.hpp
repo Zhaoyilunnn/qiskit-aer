@@ -2264,6 +2264,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             if (hasExeOnGPU[iCurExeBuf]) {
               break;
             }
+            std::cout << "Waiting GPU finish execution ..." << std::endl;
           }
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
@@ -2286,6 +2287,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
             if (hasExeOnGPU[idx_eb]) {
 //              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
+              std::cout << "Waiting copy from CPU ..." << std::endl;
               canExecute = false;
               break;
             }
