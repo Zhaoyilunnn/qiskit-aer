@@ -2269,7 +2269,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
           m_Chunks[0].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                iCurExeBuf, chunkBits, 1);  //copy chunk from other place
-#pragma omp atomic write
+          #pragma omp atomic write
           hasExeOnGPU[iCurExeBuf] = 0;  // this buffer cannot be over write until it is executed and copied back
 
           std::cout << "Buffer: " << iCurExeBuf << " has been written" << std::endl;
@@ -2278,7 +2278,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
         }
       }
-#pragma omp atomic update
+      #pragma omp atomic write
       hasCopyFinished = true;
       std::cout << "Has finished Copy from H->D" << std::endl;
     } else { // another thread is responsible execution
@@ -2316,7 +2316,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               std::cout << "Copying back to CPU ..." << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1);
-#pragma omp atomic write
+              #pragma omp atomic write
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
             }
           }
@@ -2358,7 +2358,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             std::cout << "Copying back to CPU ..." << std::endl;
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1);
-#pragma omp atomic write
+            #pragma omp atomic write
             hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
           }
         }
