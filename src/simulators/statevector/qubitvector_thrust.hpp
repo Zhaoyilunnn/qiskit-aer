@@ -2298,7 +2298,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
           std::cout << std::endl;
 
-          idx_buf += nChunk;
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
             if (hasExeOnGPU[idx_eb]) {
 //              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
@@ -2330,6 +2329,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                    chunkBits, 1);
 #pragma omp atomic write
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
+
+              idx_buf += nChunk;
             }
           }
         }
