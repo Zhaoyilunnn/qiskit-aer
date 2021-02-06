@@ -2298,6 +2298,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       while (!hasCpuCopyFinish) {
 #pragma omp atomic read
         hasCpuCopyFinish = hasCopyFinish;
+        std::cout << "hasCpuCopyFinish: " << hasCpuCopyFinish << std::endl;
         int idx_buf = 0;
         while (idx_buf < nGPUBuffer) {
           bool canExecute = true;
@@ -2348,6 +2349,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         }
       }
       // check again to see if there are rest chunks
+      std::cout << "Checking rest chunks ..." << std::endl;
       int idx_buf = 0;
       while (idx_buf < nGPUBuffer) {
         bool canExecute = true;
