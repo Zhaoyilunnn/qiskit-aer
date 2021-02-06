@@ -2293,11 +2293,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         while (idx_buf < nGPUBuffer) {
           bool canExecute = true;
 
-          for (auto flag : hasExeOnGPU) {
-            std::cout << flag << " ";
-          }
-          std::cout << std::endl;
-
           for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
             if (hasExeOnGPU[idx_eb]) {
 //              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
@@ -2329,10 +2324,60 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                    chunkBits, 1);
 #pragma omp atomic write
               hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
-
-              idx_buf += nChunk;
             }
+
+            for (auto flag : hasExeOnGPU) {
+              std::cout << flag << " ";
+            }
+            std::cout << std::endl;
+
+            idx_buf += nChunk;
           }
+        }
+      }
+      // check again to see if there are rest chunks
+      int idx_buf = 0;
+      while (idx_buf < nGPUBuffer) {
+        bool canExecute = true;
+
+        for (int idx_eb = idx_buf; idx_eb < idx_buf + nChunk; idx_eb++) {
+          if (hasExeOnGPU[idx_eb]) {
+//              std::cout << "Buffer: " << idx_eb << " has not been written" << std::endl;
+            canExecute = false;
+            break;
+          }
+        }
+        if (canExecute) {
+          std::cout << "Executing On GPU..." << std::endl;
+          // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
+          //setting buffers
+          localMask = 0;
+          for (ib = 0; ib < nBuf; ib++) {
+            offsets[ib] = chunkOffsets[buf2chunk[ib]] + offsetBase[ib];
+            localMask |= (1ull << ib); //currently all buffers are local
+          }
+
+          //execute kernel
+          bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
+          if (func.Reduction())
+            ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size, m_Chunks[iPlace].Size()+idx_buf, localMask, enable_omp);
+          else
+            m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size()+idx_buf, localMask, enable_omp);
+
+          //copy back
+          for (i = idx_buf; i < idx_buf + nChunk; i++) {
+            std::cout << "Copying back to CPU ..." << std::endl;
+            m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
+                                 chunkBits, 1);
+#pragma omp atomic write
+            hasExeOnGPU[idx_buf] = 1;   // another thread now can copy chunk to this buffer
+          }
+          for (auto flag : hasExeOnGPU) {
+            std::cout << flag << " ";
+          }
+          std::cout << std::endl;
+
+          idx_buf += nChunk;
         }
       }
     }
