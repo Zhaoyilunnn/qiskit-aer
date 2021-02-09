@@ -172,7 +172,7 @@ public:
 
   virtual void Copy(const std::vector<data_t>& v) = 0;
 
-  virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t &stream) = 0;
+  virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0) = 0;
 
   virtual void CopyIn(uint_t pos,const data_t* pSrc,uint_t size) = 0;
   virtual void CopyOut(uint_t pos,data_t* pDest,uint_t size) = 0;
@@ -226,7 +226,7 @@ public:
     m_Buffer = v;
   }
 
-  void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t &stream);
+  void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t stream);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -247,7 +247,7 @@ public:
     ;
   }
 
-  thrust::host_vector<data_t>& Buffer(void)
+  thrust::host_vector<data_t, thrust::cuda::experimental::pinned_allocator<data_t> >& Buffer(void)
   {
     return m_Buffer;
   }
@@ -286,7 +286,7 @@ public:
 
 template <typename data_t>
 void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,
-                                           uint_t size,int isDevice,cudaStream_t &stream)
+                                           uint_t size,int isDevice,cudaStream_t stream)
 {
   if(isDevice){
     QubitVectorDeviceBuffer<data_t>* pSrcDev = (QubitVectorDeviceBuffer<data_t>*)pSrc;
@@ -318,7 +318,7 @@ void QubitVectorDeviceBuffer<data_t>::CopyOut(uint_t pos,data_t* pDest,uint_t si
 
 template <typename data_t>
 void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,
-                                         uint_t size,int isDevice,cudaStream_t &stream)
+                                         uint_t size,int isDevice,cudaStream_t stream)
 {
   if(isDevice){
     QubitVectorDeviceBuffer<data_t>* pSrcDev = (QubitVectorDeviceBuffer<data_t>*)pSrc;
@@ -423,8 +423,8 @@ public:
   int Allocate(uint_t size,uint_t bufferSize = 0);
   int AllocateParameters(int bits);
 
-  int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks, cudaStream_t &stream);
-  int Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,int chunkBits,int nChunks, cudaStream_t &stream);
+  int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks, cudaStream_t stream);
+  int Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,int chunkBits,int nChunks, cudaStream_t stream);
 
   int CopyIn(const thrust::complex<data_t>* pVec,uint_t offset,uint_t chunkID,int chunkBits);
   int CopyOut(thrust::complex<data_t>* pVec,uint_t offset,uint_t chunkID,int chunkBits);
@@ -444,11 +444,11 @@ public:
 
   template <typename Function>
   int Execute(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
-              uint_t localMask, bool omp_parallel, cudaStream_t &stream);
+              uint_t localMask, bool omp_parallel, cudaStream_t stream);
 
   template <typename Function>
   double ExecuteSum(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
-                    uint_t localMask, bool omp_parallel, cudaStream_t &stream);
+                    uint_t localMask, bool omp_parallel, cudaStream_t stream);
 
   void SetParams(struct GateParams<data_t>& params);
 
@@ -575,7 +575,7 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
 //copy chunk from other container to buffer
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,
-                                           int chunkBits,int nChunks,cudaStream_t &stream)
+                                           int chunkBits,int nChunks,cudaStream_t stream)
 {
   uint_t srcPos,destPos,size;
   srcPos = src << chunkBits;
@@ -593,7 +593,7 @@ int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chun
     }
   }
   else{
-    m_pChunks->Copy(destPos,chunks.m_pChunks,srcPos,size,(chunks.DeviceID() >= 0),&stream);
+    m_pChunks->Copy(destPos,chunks.m_pChunks,srcPos,size,(chunks.DeviceID() >= 0),stream);
   }
 
   return 0;
@@ -602,7 +602,7 @@ int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chun
 //copy chunk to other container from buffer
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,
-                                           int chunkBits,int nChunks,cudaStream_t &stream)
+                                           int chunkBits,int nChunks,cudaStream_t stream)
 {
   uint_t srcPos,destPos,size;
   destPos = dest << chunkBits;
@@ -718,7 +718,7 @@ void QubitVectorChunkContainer<data_t>::StoreOffsets(const std::vector<uint_t>& 
 template <typename data_t>
 template <typename Function>
 int QubitVectorChunkContainer<data_t>::Execute(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
-                                               uint_t localMask, bool omp_parallel, cudaStream_t &stream)
+                                               uint_t localMask, bool omp_parallel, cudaStream_t stream)
 {
   struct GateParams<data_t> params;
 
@@ -761,7 +761,7 @@ int QubitVectorChunkContainer<data_t>::Execute(std::vector<uint_t>& offsets,Func
 template <typename data_t>
 template <typename Function>
 double QubitVectorChunkContainer<data_t>::ExecuteSum(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
-                                                     uint_t localMask, bool omp_parallel, cudaStream_t &stream)
+                                                     uint_t localMask, bool omp_parallel, cudaStream_t stream)
 {
   struct GateParams<data_t> params;
   double ret;
