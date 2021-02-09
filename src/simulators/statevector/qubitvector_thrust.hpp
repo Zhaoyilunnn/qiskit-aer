@@ -80,7 +80,7 @@ double mysecond()
 
 #define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
-#define AER_MAX_GPU_BUFFERS   480
+#define AER_MAX_GPU_BUFFERS   64
 #define AER_NUM_STREAM        2
 
 namespace AER {
@@ -2357,7 +2357,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             ++iGPUBuffer;
             std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
           }
-          if (iGPUBuffer % nGPUBuffer == 0 || iChunk == nTotalChunks) {
+          if (iGPUBuffer % (nGPUBuffer / num_streams) == 0 || iChunk == nTotalChunks) {
             std::cout << "Executing On GPU..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
             //setting buffers
