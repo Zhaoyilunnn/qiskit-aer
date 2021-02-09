@@ -1394,7 +1394,7 @@ QubitVectorThrust<data_t>::~QubitVectorThrust() {
   }
 #endif
 
-//  destroy_streams();
+  destroy_streams();
 }
 
 //------------------------------------------------------------------------------
@@ -1886,7 +1886,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
 #endif
 
   // create streams
-//  create_streams();
+  create_streams();
 
 
 #ifdef AER_TIMING

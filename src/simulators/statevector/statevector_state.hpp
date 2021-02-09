@@ -473,6 +473,7 @@ void State<statevec_t>::apply_ops(const std::vector<Operations::Op> &ops,
                                   RngEngine &rng,
                                   bool final_ops) {
 
+  std::cout << "Start applying operations ..." << std::endl;
   // Simple loop over vector of input operations
   for (size_t i = 0; i < ops.size(); ++i) {
     const auto& op = ops[i];
