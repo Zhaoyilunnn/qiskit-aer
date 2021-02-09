@@ -28,6 +28,7 @@
 #include <thrust/transform_scan.h>
 #include <thrust/binary_search.h>
 #include <thrust/execution_policy.h>
+#include <thrust/system/cuda/experimental/pinned_allocator.h>
 #include <thrust/functional.h>
 #include <thrust/tuple.h>
 #include <thrust/iterator/constant_iterator.h>
@@ -80,6 +81,7 @@ double mysecond()
 #define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
 #define AER_MAX_GPU_BUFFERS   480
+#define AER_NUM_STREAM        2
 
 namespace AER {
 namespace QV {
@@ -170,7 +172,7 @@ public:
 
   virtual void Copy(const std::vector<data_t>& v) = 0;
 
-  virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0) = 0;
+  virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t &stream) = 0;
 
   virtual void CopyIn(uint_t pos,const data_t* pSrc,uint_t size) = 0;
   virtual void CopyOut(uint_t pos,data_t* pDest,uint_t size) = 0;
@@ -224,7 +226,7 @@ public:
     m_Buffer = v;
   }
 
-  void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1);
+  void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t &stream);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -235,7 +237,10 @@ template <typename data_t>
 class QubitVectorHostBuffer : public QubitVectorBuffer<data_t>
 {
 protected:
-  thrust::host_vector<data_t> m_Buffer;
+  // host_vector does not work for async
+  // ref: https://stackoverflow.com/questions/25064383/how-to-asynchronously-copy-memory-from-the-host-to-the-device-using-thrust-and-c
+  thrust::host_vector<data_t, thrust::cuda::experimental::pinned_allocator<data_t> > m_Buffer;
+//  thrust::host_vector<data_t> m_Buffer;
 public:
   QubitVectorHostBuffer(uint_t size) : m_Buffer(size)
   {
@@ -280,15 +285,22 @@ public:
 
 
 template <typename data_t>
-void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice)
+void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,
+                                           uint_t size,int isDevice,cudaStream_t &stream)
 {
   if(isDevice){
     QubitVectorDeviceBuffer<data_t>* pSrcDev = (QubitVectorDeviceBuffer<data_t>*)pSrc;
-    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+//    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+                    thrust::raw_pointer_cast(pSrcDev->Buffer().data()+srcPos),
+                    size*sizeof(data_t),cudaMemcpyDeviceToHost,stream);
   }
   else{
     QubitVectorHostBuffer<data_t>* pSrcHost = (QubitVectorHostBuffer<data_t>*)pSrc;
-    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+//    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+                    thrust::raw_pointer_cast(pSrcHost->Buffer().data()+srcPos),
+                    size*sizeof(data_t),cudaMemcpyHostToDevice,stream);
   }
 }
 
@@ -305,15 +317,23 @@ void QubitVectorDeviceBuffer<data_t>::CopyOut(uint_t pos,data_t* pDest,uint_t si
 }
 
 template <typename data_t>
-void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice)
+void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,
+                                         uint_t size,int isDevice,cudaStream_t &stream)
 {
   if(isDevice){
     QubitVectorDeviceBuffer<data_t>* pSrcDev = (QubitVectorDeviceBuffer<data_t>*)pSrc;
-    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+//    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+    //TODO: need revision if extends to multi-GPU
+    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+                    thrust::raw_pointer_cast(pSrcDev->Buffer().data()+srcPos),
+                    size*sizeof(data_t),cudaMemcpyDeviceToHost,stream);
   }
   else{
     QubitVectorHostBuffer<data_t>* pSrcHost = (QubitVectorHostBuffer<data_t>*)pSrc;
-    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+//    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+                    thrust::raw_pointer_cast(pSrcHost->Buffer().data()+srcPos),
+                    size*sizeof(data_t),cudaMemcpyHostToDevice,stream);
   }
 }
 
@@ -403,8 +423,8 @@ public:
   int Allocate(uint_t size,uint_t bufferSize = 0);
   int AllocateParameters(int bits);
 
-  int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks);
-  int Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,int chunkBits,int nChunks);
+  int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks, cudaStream_t &stream);
+  int Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,int chunkBits,int nChunks, cudaStream_t &stream);
 
   int CopyIn(const thrust::complex<data_t>* pVec,uint_t offset,uint_t chunkID,int chunkBits);
   int CopyOut(thrust::complex<data_t>* pVec,uint_t offset,uint_t chunkID,int chunkBits);
@@ -423,10 +443,12 @@ public:
   void StoreOffsets(const std::vector<uint_t>& ptr);
 
   template <typename Function>
-  int Execute(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,uint_t localMask, bool omp_parallel);
+  int Execute(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
+              uint_t localMask, bool omp_parallel, cudaStream_t &stream);
 
   template <typename Function>
-  double ExecuteSum(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid, uint_t localMask, bool omp_parallel);
+  double ExecuteSum(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
+                    uint_t localMask, bool omp_parallel, cudaStream_t &stream);
 
   void SetParams(struct GateParams<data_t>& params);
 
@@ -553,7 +575,7 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
 //copy chunk from other container to buffer
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,
-                                           int chunkBits,int nChunks)
+                                           int chunkBits,int nChunks,cudaStream_t &stream)
 {
   uint_t srcPos,destPos,size;
   srcPos = src << chunkBits;
@@ -562,16 +584,16 @@ int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chun
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
-      m_pChunks->Copy(destPos,chunks.m_pChunks,srcPos,size,1);
+      m_pChunks->Copy(destPos,chunks.m_pChunks,srcPos,size,1,stream);
     }
     else{
       QubitVectorHostBuffer<thrust::complex<data_t>> tmp(size);
       tmp.Copy(0,chunks.m_pChunks,srcPos,size,1);   //D to H
-      m_pChunks->Copy(destPos,&tmp,0,size,0);     //H to D
+      m_pChunks->Copy(destPos,&tmp,0,size,0,stream);     //H to D
     }
   }
   else{
-    m_pChunks->Copy(destPos,chunks.m_pChunks,srcPos,size,(chunks.DeviceID() >= 0));
+    m_pChunks->Copy(destPos,chunks.m_pChunks,srcPos,size,(chunks.DeviceID() >= 0),&stream);
   }
 
   return 0;
@@ -580,7 +602,7 @@ int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chun
 //copy chunk to other container from buffer
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,
-                                           int chunkBits,int nChunks)
+                                           int chunkBits,int nChunks,cudaStream_t &stream)
 {
   uint_t srcPos,destPos,size;
   destPos = dest << chunkBits;
@@ -589,16 +611,16 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
-      chunks.m_pChunks->Copy(destPos,m_pChunks,srcPos,size,1);
+      chunks.m_pChunks->Copy(destPos,m_pChunks,srcPos,size,1,stream);
     }
     else{
       QubitVectorHostBuffer<thrust::complex<data_t>> tmp(size);
       tmp.Copy(0,m_pChunks,srcPos,size,1);      //D to H
-      chunks.m_pChunks->Copy(destPos,&tmp,0,size,0);  //H to D
+      chunks.m_pChunks->Copy(destPos,&tmp,0,size,0,stream);  //H to D
     }
   }
   else{
-    chunks.m_pChunks->Copy(destPos,m_pChunks,srcPos,size,(DeviceID() >= 0));
+    chunks.m_pChunks->Copy(destPos,m_pChunks,srcPos,size,(DeviceID() >= 0),stream);
   }
 
   return 0;
@@ -695,7 +717,8 @@ void QubitVectorChunkContainer<data_t>::StoreOffsets(const std::vector<uint_t>& 
 
 template <typename data_t>
 template <typename Function>
-int QubitVectorChunkContainer<data_t>::Execute(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,uint_t localMask, bool omp_parallel)
+int QubitVectorChunkContainer<data_t>::Execute(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
+                                               uint_t localMask, bool omp_parallel, cudaStream_t &stream)
 {
   struct GateParams<data_t> params;
 
@@ -722,7 +745,7 @@ int QubitVectorChunkContainer<data_t>::Execute(std::vector<uint_t>& offsets,Func
 #ifdef AER_THRUST_CUDA
     cudaSetDevice(m_iDevice);
 #endif
-    thrust::for_each_n(thrust::device, chunkIter, size, func);
+    thrust::for_each_n(thrust::cuda::par.on(stream), chunkIter, size, func);
   }
   else{
     if (omp_parallel) {
@@ -737,7 +760,8 @@ int QubitVectorChunkContainer<data_t>::Execute(std::vector<uint_t>& offsets,Func
 
 template <typename data_t>
 template <typename Function>
-double QubitVectorChunkContainer<data_t>::ExecuteSum(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,uint_t localMask, bool omp_parallel)
+double QubitVectorChunkContainer<data_t>::ExecuteSum(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
+                                                     uint_t localMask, bool omp_parallel, cudaStream_t &stream)
 {
   struct GateParams<data_t> params;
   double ret;
@@ -765,7 +789,7 @@ double QubitVectorChunkContainer<data_t>::ExecuteSum(std::vector<uint_t>& offset
 #ifdef AER_THRUST_CUDA
     cudaSetDevice(m_iDevice);
 #endif
-    ret = thrust::transform_reduce(thrust::device, chunkIter, chunkIter + size, func,0.0,thrust::plus<double>());
+    ret = thrust::transform_reduce(thrust::cuda::par.on(stream), chunkIter, chunkIter + size, func,0.0,thrust::plus<double>());
   }
   else{
     if (omp_parallel) {
@@ -901,6 +925,12 @@ public:
 
   // Set all entries in the vector to 0.
   void zero();
+
+  // Create streams
+  void create_streams();
+
+  // Destroy streams
+  void destroy_streams();
 
 
   // State initialization of a component
@@ -1110,6 +1140,10 @@ public:
   int get_sample_measure_index_size() {return sample_measure_index_size_;}
 
 protected:
+  //-----------------------------------------------------------------------
+  // Streams
+  //-----------------------------------------------------------------------
+  cudaStream_t m_Streams[AER_NUM_STREAM];
 
   //-----------------------------------------------------------------------
   // Protected data members
@@ -1357,6 +1391,7 @@ QubitVectorThrust<data_t>::~QubitVectorThrust() {
   }
 #endif
 
+  destroy_streams();
 }
 
 //------------------------------------------------------------------------------
@@ -1526,6 +1561,30 @@ AER::Vector<std::complex<data_t>> QubitVectorThrust<data_t>::move_to_vector() {
   return copy_to_vector();
 }
 
+
+//------------------------------------------------------------------------------
+// Streams management
+//------------------------------------------------------------------------------
+template <typename data_t>
+void QubitVectorThrust<data_t>::create_streams()
+{
+  int num_streams = AER_NUM_STREAM;
+  for (int i = 0; i < num_streams; i++) {
+    cudaStreamCreate(&m_Streams[i]);
+  }
+}
+
+template <typename data_t>
+void QubitVectorThrust<data_t>::destroy_streams()
+{
+  int num_streams = AER_NUM_STREAM;
+  for (int i = 0; i < num_streams; i++) {
+    cudaStreamSynchronize(m_Streams[i]);
+  }
+  for (int i = 0; i < num_streams; i++) {
+    cudaStreamDestroy(m_Streams[i]);
+  }
+}
 
 //------------------------------------------------------------------------------
 // State initialize component
@@ -1820,6 +1879,9 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
     m_Chunks[i].SetupP2P(m_nDevParallel);
   }
 #endif
+
+  // create streams
+  create_streams();
 
 
 #ifdef AER_TIMING
@@ -2234,6 +2296,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
       size *= (nGPUBuffer / nChunk);  // increase execution parallelism
       int nChunksOnGPU = 0;  // num chunks that are active on GPU
+      int iStream = 0;        // index of stream, currently using two streams
+      int num_streams = m_Streams.size();   // number of streams
 
       noDataExchange = 0; // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
@@ -2243,7 +2307,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           nChunksOnGPU = (iGPUBuffer + nGPUBuffer) > nTotalChunks ? nTotalChunks % nGPUBuffer : nGPUBuffer;
           std::cout << "Active chunks on GPU: " << nChunksOnGPU << std::endl;
           m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(iGPUBuffer, chunkBits),
-                               0, chunkBits, nChunksOnGPU);
+                               0, chunkBits, nChunksOnGPU, m_Streams[iStream]);
 
           std::cout << "Executing On GPU..." << std::endl;
           // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
@@ -2252,13 +2316,15 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           //execute kernel
           bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
           if (func.Reduction())
-            ret += m_Chunks[iPlace].ExecuteSum(offsetBase, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
+            ret += m_Chunks[iPlace].ExecuteSum(offsetBase, func, size, m_Chunks[iPlace].Size(), localMask,
+                                               enable_omp, m_Streams[iStream]);
           else
-            m_Chunks[iPlace].Execute(offsetBase, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
+            m_Chunks[iPlace].Execute(offsetBase, func, size, m_Chunks[iPlace].Size(), localMask,
+                                     enable_omp, m_Streams[iStream]);
           // copy from D -> H
           std::cout << "Copying back to CPU ..." << std::endl;
           m_Chunks[iPlace].Put(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(iGPUBuffer, chunkBits), 0,
-                               chunkBits, nChunksOnGPU);
+                               chunkBits, nChunksOnGPU, m_Streams[iStream]);
         }
       } else { // copy chunk one-by-one
         for (iChunk = 0; iChunk < nTotalChunks; iChunk++) {
@@ -2283,7 +2349,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             }
             std::cout << "Copying from CPU to GPU..." << std::endl;
             m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
-                                 iCurExeBuf, chunkBits, 1);  //copy chunk from other place
+                                 iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place
             chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
             ++iGPUBuffer;
             std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
@@ -2301,17 +2367,22 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             //execute kernel
             bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
             if (func.Reduction())
-              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
+              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size, m_Chunks[iPlace].Size(), localMask,
+                                                 enable_omp, m_Streams[iStream]);
             else
-              m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size(), localMask, enable_omp);
+              m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size(), localMask,
+                                       enable_omp, m_Streams[iStream]);
 
             //copy back
             nChunksOnGPU = iGPUBuffer % nGPUBuffer ? iGPUBuffer % nGPUBuffer : nGPUBuffer;
             for (i = 0; i < nChunksOnGPU; i++) {
               std::cout << "Copying back to CPU ..." << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
-                                   chunkBits, 1);
+                                   chunkBits, 1, m_Streams[iStream]);
             }
+
+            //after copy, exe, copy back, switch stream
+            iStream = (iStream + 1) % num_streams;
           }
         }
       }
