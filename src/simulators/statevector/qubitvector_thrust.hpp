@@ -1360,7 +1360,7 @@ QubitVectorThrust<data_t>::QubitVectorThrust(size_t num_qubits) : num_qubits_(0)
   debug_fp = NULL;
   debug_count = 0;
 #endif
-
+  create_streams();
   if(num_qubits != 0){
     set_num_qubits(num_qubits);
   }
@@ -1369,7 +1369,7 @@ QubitVectorThrust<data_t>::QubitVectorThrust(size_t num_qubits) : num_qubits_(0)
 template <typename data_t>
 QubitVectorThrust<data_t>::QubitVectorThrust() : QubitVectorThrust(0)
 {
-
+  create_streams();
 }
 
 template <typename data_t>
@@ -1884,10 +1884,6 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
     m_Chunks[i].SetupP2P(m_nDevParallel);
   }
 #endif
-
-  // create streams
-  create_streams();
-
 
 #ifdef AER_TIMING
   TimeEnd(QS_GATE_INIT);
