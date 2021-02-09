@@ -226,7 +226,7 @@ public:
     m_Buffer = v;
   }
 
-  void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t stream);
+  void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t stream=0);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -277,7 +277,7 @@ public:
     m_Buffer = v;
   }
 
-  void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0);
+  void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
