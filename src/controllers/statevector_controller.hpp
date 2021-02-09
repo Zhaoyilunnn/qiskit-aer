@@ -309,6 +309,7 @@ void StatevectorController::run_circuit_helper(
     op_ptr = &opt_circ.ops;
   }
 
+  std::cout << "Start running circuit ..." << std::endl;
   // Run single shot collecting measure data or snapshots
   if (initial_state_.empty()) {
     state.initialize_qreg(circ.num_qubits);

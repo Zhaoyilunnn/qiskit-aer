@@ -1394,7 +1394,7 @@ QubitVectorThrust<data_t>::~QubitVectorThrust() {
   }
 #endif
 
-  destroy_streams();
+//  destroy_streams();
 }
 
 //------------------------------------------------------------------------------
@@ -1571,6 +1571,7 @@ AER::Vector<std::complex<data_t>> QubitVectorThrust<data_t>::move_to_vector() {
 template <typename data_t>
 void QubitVectorThrust<data_t>::create_streams()
 {
+  std::cout << "Creating streams ..." << std::endl;
   int num_streams = AER_NUM_STREAM;
   for (int i = 0; i < num_streams; i++) {
     cudaStreamCreate(&m_Streams[i]);
@@ -1580,6 +1581,7 @@ void QubitVectorThrust<data_t>::create_streams()
 template <typename data_t>
 void QubitVectorThrust<data_t>::destroy_streams()
 {
+  std::cout << "Destroying streams ..." << std::endl;
   int num_streams = AER_NUM_STREAM;
   for (int i = 0; i < num_streams; i++) {
     cudaStreamSynchronize(m_Streams[i]);
@@ -1884,7 +1886,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
 #endif
 
   // create streams
-  create_streams();
+//  create_streams();
 
 
 #ifdef AER_TIMING
@@ -2301,6 +2303,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int nChunksOnGPU = 0;  // num chunks that are active on GPU
       int iStream = 0;        // index of stream, currently using two streams
       int num_streams = streams_size();   // number of streams
+      m_Streams[0] = 0;
+      m_Streams[1] = 0;
 
       noDataExchange = 0; // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
