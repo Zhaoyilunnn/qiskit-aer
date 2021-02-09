@@ -905,6 +905,9 @@ public:
   // Returns the number of qubits for the current vector
   virtual uint_t num_qubits() const {return num_qubits_;}
 
+  // Return the size of streams
+  uint_t streams_size() const {return sizeof(m_Streams) / sizeof(m_Streams[0]);}
+
   // Returns the size of the underlying n-qubit vector
   uint_t size() const {return data_size_;}
 
@@ -2297,7 +2300,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       size *= (nGPUBuffer / nChunk);  // increase execution parallelism
       int nChunksOnGPU = 0;  // num chunks that are active on GPU
       int iStream = 0;        // index of stream, currently using two streams
-      int num_streams = m_Streams.size();   // number of streams
+      int num_streams = streams_size();   // number of streams
 
       noDataExchange = 0; // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
