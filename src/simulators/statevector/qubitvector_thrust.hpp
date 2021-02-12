@@ -2300,8 +2300,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int iStream = 0;                                            // index of stream, currently using two streams
       int num_streams = streams_size();                           // number of streams
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
-      int iTraversedChunk = 0;                                    // Index of chunk on CPU that has been traversed,
-                                                                  // help decide whether all chunks has been copied
+      int num_exe = 0;
 
       noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
@@ -2342,7 +2341,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             continue;
           }
 
-          iTraversedChunk = iChunk;
           for (i = 0; i < nChunk; i++) {
             iCurExeBuf = iGPUBuffer % nGPUBuffer; // current chunk on GPU that is being written by Memcpy H->D
             chunkIDs[iCurExeBuf] = baseChunk;
@@ -2359,12 +2357,12 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             ++iGPUBuffer;
             std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
           }
-          iTraversedChunk += nChunk;
+          num_exe += nChunk;
 
-          if (iGPUBuffer % nGPUBufferPerStream == 0 || iTraversedChunk == nTotalChunks) {
+          if (iGPUBuffer % nGPUBufferPerStream == 0) {
             nChunksOnGPU = iGPUBuffer % nGPUBufferPerStream ? iGPUBuffer % nGPUBufferPerStream : nGPUBufferPerStream;
                                                     // number of chunks that are active on GPU
-            exe_size = size * (nChunksOnGPU / nChunk);
+            exe_size = size * (nChunksOnGPU / nChunk);  // chunks within a stream will be executed at the same time
 
             std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
@@ -2384,6 +2382,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             else
               m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream*nGPUBufferPerStream)<<chunkBits, localMask,
                                        enable_omp, m_Streams[iStream]);
+            num_exe -= nChunksOnGPU;
 
             //copy back
             for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
@@ -2396,6 +2395,43 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             iStream = (iStream + 1) % num_streams; // current stream
           }
         }
+
+        // check if there remains chunks to be executed
+        if (num_exe != 0) {
+          nChunksOnGPU = num_exe;
+          // number of chunks that are active on GPU
+          exe_size = size * (nChunksOnGPU / nChunk);  // chunks within a stream will be executed at the same time
+
+          std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
+          // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
+          //setting buffers
+          localMask = 0;
+          for (ib = 0; ib < nBuf; ib++) {
+            offsets[ib] = chunkOffsets[buf2chunk[ib]] + offsetBase[ib];
+            localMask |= (1ull << ib); //currently all buffers are local
+          }
+
+          //execute kernel
+          bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
+          if (func.Reduction())
+            ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
+                                               (iStream*nGPUBufferPerStream)<<chunkBits,
+                                               localMask, enable_omp, m_Streams[iStream]);
+          else
+            m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream*nGPUBufferPerStream)<<chunkBits, localMask,
+                                     enable_omp, m_Streams[iStream]);
+
+          //copy back
+          for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
+            std::cout << "Copying back to CPU ..." << std::endl;
+            m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
+                                 chunkBits, 1, m_Streams[iStream]);
+          }
+
+          // Switch stream
+          iStream = (iStream + 1) % num_streams; // current stream
+        }
+
       }
     }
   }
