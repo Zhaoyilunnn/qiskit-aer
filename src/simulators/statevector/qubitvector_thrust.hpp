@@ -2299,6 +2299,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int nChunksOnGPU = 0;  // num chunks that are active on GPU
       int iStream = 0;        // index of stream, currently using two streams
       int num_streams = streams_size();   // number of streams
+      int nGPUBufferPerStream = nGPUBuffer / num_streams;
 
       noDataExchange = 0; // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
@@ -2355,8 +2356,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             ++iGPUBuffer;
             std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
           }
-          if (iGPUBuffer % (nGPUBuffer / num_streams) == 0 || iChunk == nTotalChunks) {
-            std::cout << "Executing On GPU..." << std::endl;
+          if (iGPUBuffer % nGPUBufferPerStream == 0 || iChunk == nTotalChunks - 1) {
+            iStream = (iCurExeBuf + 1) / nGPUBufferPerStream - 1;
+            std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
             //setting buffers
             localMask = 0;
@@ -2368,22 +2370,20 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             //execute kernel
             bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
             if (func.Reduction())
-              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size, m_Chunks[iPlace].Size(), localMask,
-                                                 enable_omp, m_Streams[iStream]);
+              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size,
+                                                 (iStream*nGPUBufferPerStream)<<chunkBits,
+                                                 localMask, enable_omp, m_Streams[iStream]);
             else
-              m_Chunks[iPlace].Execute(offsets, func, size, m_Chunks[iPlace].Size(), localMask,
+              m_Chunks[iPlace].Execute(offsets, func, size, (iStream*nGPUBufferPerStream)<<chunkBits, localMask,
                                        enable_omp, m_Streams[iStream]);
 
             //copy back
-            nChunksOnGPU = iGPUBuffer % nGPUBuffer ? iGPUBuffer % nGPUBuffer : nGPUBuffer;
+            nChunksOnGPU = iGPUBuffer % nGPUBufferPerStream ? iGPUBuffer % nGPUBufferPerStream : nGPUBufferPerStream;
             for (i = 0; i < nChunksOnGPU; i++) {
               std::cout << "Copying back to CPU ..." << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1, m_Streams[iStream]);
             }
-
-            //after copy, exe, copy back, switch stream
-            iStream = (iStream + 1) % num_streams;
           }
         }
       }
