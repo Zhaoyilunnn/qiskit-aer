@@ -2300,7 +2300,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int iStream = 0;                                            // index of stream, currently using two streams
       int num_streams = streams_size();                           // number of streams
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
-      size *= (nGPUBufferPerStream / nChunk);                     // increase execution parallelism
       int iTraversedChunk = 0;                                    // Index of chunk on CPU that has been traversed,
                                                                   // help decide whether all chunks has been copied
 
@@ -2363,6 +2362,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           iTraversedChunk += nChunk;
 
           if (iGPUBuffer % nGPUBufferPerStream == 0 || iTraversedChunk == nTotalChunks) {
+            nChunksOnGPU = iGPUBuffer % nGPUBufferPerStream ? iGPUBuffer % nGPUBufferPerStream : nGPUBufferPerStream;
+                                                    // number of chunks that are active on GPU
+            size *= (nChunksOnGPU / nChunk);
             iStream = (iCurExeBuf + 1) / nGPUBufferPerStream - 1; // current stream
             if (iStream < 0) {
               iStream = 0;
@@ -2387,7 +2389,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                        enable_omp, m_Streams[iStream]);
 
             //copy back
-            nChunksOnGPU = iGPUBuffer % nGPUBufferPerStream ? iGPUBuffer % nGPUBufferPerStream : nGPUBufferPerStream;
             for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
               std::cout << "Copying back to CPU ..." << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
