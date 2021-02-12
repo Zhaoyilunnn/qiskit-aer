@@ -2341,7 +2341,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
 
           for (i = 0; i < nChunk; i++) {
-            iCurExeBuf = iGPUBuffer % nGPUBuffer;
+            iCurExeBuf = iGPUBuffer % nGPUBuffer; // current chunk on GPU that is being written by Memcpy H->D
             chunkIDs[iCurExeBuf] = baseChunk;
             std::cout << "Base Chunk: " << baseChunk << std::endl;
             for (ib = 0; ib < nLarge; ib++) {
@@ -2357,7 +2357,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
           }
           if (iGPUBuffer % nGPUBufferPerStream == 0 || iChunk == nTotalChunks - 1) {
-            iStream = (iCurExeBuf + 1) / nGPUBufferPerStream - 1;
+            iStream = (iCurExeBuf + 1) / nGPUBufferPerStream - 1; // current stream
             std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
             //setting buffers
