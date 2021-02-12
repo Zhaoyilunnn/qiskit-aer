@@ -80,8 +80,8 @@ double mysecond()
 
 #define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
-#define AER_MAX_GPU_BUFFERS   256
-#define AER_NUM_STREAM        8
+#define AER_MAX_GPU_BUFFERS   64
+#define AER_NUM_STREAM        2
 
 namespace AER {
 namespace QV {
@@ -2301,6 +2301,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int num_streams = streams_size();                           // number of streams
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
       size *= (nGPUBufferPerStream / nChunk);                     // increase execution parallelism
+      int iTraversedChunk = 0;                                    // Index of chunk on CPU that has been traversed,
+                                                                  // help decide whether all chunks has been copied
 
       noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
@@ -2341,6 +2343,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             continue;
           }
 
+          iTraversedChunk = iChunk;
           for (i = 0; i < nChunk; i++) {
             iCurExeBuf = iGPUBuffer % nGPUBuffer; // current chunk on GPU that is being written by Memcpy H->D
             chunkIDs[iCurExeBuf] = baseChunk;
@@ -2357,7 +2360,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             ++iGPUBuffer;
             std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
           }
-          if (iGPUBuffer % nGPUBufferPerStream == 0 || iChunk == nTotalChunks - 1) {
+          iTraversedChunk += nChunk;
+
+          if (iGPUBuffer % nGPUBufferPerStream == 0 || iTraversedChunk == nTotalChunks) {
             iStream = (iCurExeBuf + 1) / nGPUBufferPerStream - 1; // current stream
             std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
