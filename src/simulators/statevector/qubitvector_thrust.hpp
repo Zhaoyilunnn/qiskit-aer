@@ -80,8 +80,8 @@ double mysecond()
 
 #define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
-#define AER_MAX_GPU_BUFFERS   64
-#define AER_NUM_STREAM        2
+#define AER_MAX_GPU_BUFFERS   128
+#define AER_NUM_STREAM        4
 
 namespace AER {
 namespace QV {
@@ -2427,9 +2427,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1, m_Streams[iStream]);
           }
-
-          // Switch stream
-          iStream = (iStream + 1) % num_streams; // current stream
         }
 
       }
