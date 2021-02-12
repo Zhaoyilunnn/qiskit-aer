@@ -2364,6 +2364,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           if (iGPUBuffer % nGPUBufferPerStream == 0 || iTraversedChunk == nTotalChunks) {
             iStream = (iCurExeBuf + 1) / nGPUBufferPerStream - 1; // current stream
+            if (iStream < 0) {
+              iStream = 0;
+            }
             std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
             //setting buffers
