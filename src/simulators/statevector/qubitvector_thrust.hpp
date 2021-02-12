@@ -2190,7 +2190,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 {
   const size_t N = qubits.size();
   const int numCBits = func.NumControlBits();
-  uint_t size,iChunk,nChunk,controlMask,controlFlag;
+  uint_t size,iChunk,nChunk,controlMask,controlFlag,exe_size;
   int i,ib,nBuf;
   int nSmall,nLarge = 0;
   reg_t large_qubits;
@@ -2364,10 +2364,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           if (iGPUBuffer % nGPUBufferPerStream == 0 || iTraversedChunk == nTotalChunks) {
             nChunksOnGPU = iGPUBuffer % nGPUBufferPerStream ? iGPUBuffer % nGPUBufferPerStream : nGPUBufferPerStream;
                                                     // number of chunks that are active on GPU
-            size *= (nChunksOnGPU / nChunk);
-            if (iStream < 0) {
-              iStream = 0;
-            }
+            exe_size = size * (nChunksOnGPU / nChunk);
+
             std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
             // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
             //setting buffers
@@ -2380,11 +2378,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             //execute kernel
             bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
             if (func.Reduction())
-              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, size,
+              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
                                                  (iStream*nGPUBufferPerStream)<<chunkBits,
                                                  localMask, enable_omp, m_Streams[iStream]);
             else
-              m_Chunks[iPlace].Execute(offsets, func, size, (iStream*nGPUBufferPerStream)<<chunkBits, localMask,
+              m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream*nGPUBufferPerStream)<<chunkBits, localMask,
                                        enable_omp, m_Streams[iStream]);
 
             //copy back
