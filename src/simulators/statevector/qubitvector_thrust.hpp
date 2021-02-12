@@ -80,8 +80,8 @@ double mysecond()
 
 #define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
-#define AER_MAX_GPU_BUFFERS   128
-#define AER_NUM_STREAM        4
+#define AER_MAX_GPU_BUFFERS   192
+#define AER_NUM_STREAM        6
 
 namespace AER {
 namespace QV {
