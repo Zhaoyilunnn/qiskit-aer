@@ -2365,7 +2365,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             nChunksOnGPU = iGPUBuffer % nGPUBufferPerStream ? iGPUBuffer % nGPUBufferPerStream : nGPUBufferPerStream;
                                                     // number of chunks that are active on GPU
             size *= (nChunksOnGPU / nChunk);
-            iStream = (iCurExeBuf + 1) / nGPUBufferPerStream - 1; // current stream
             if (iStream < 0) {
               iStream = 0;
             }
@@ -2394,6 +2393,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1, m_Streams[iStream]);
             }
+
+            // Switch stream
+            iStream = (iStream + 1) % num_streams; // current stream
           }
         }
       }
