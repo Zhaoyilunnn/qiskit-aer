@@ -2281,27 +2281,28 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 #pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
-    if (iPlace < m_nPlaces - 1) {  // currently only execute on GPU
+    if (iPlace < m_nPlaces - 1) { // currently only execute on GPU
       std::cout << "Place: " << iPlace << std::endl;
-      int nGPUBuffer = AER_MAX_GPU_BUFFERS;  // number of chunks that will be executed on GPU
-      int iPlaceCPU = m_nPlaces - 1;  // based on current memory allocation, CPU place id is highest
-      int iGPUBuffer = 0;   // idx of GPU buffers
-      int nTotalChunks = m_Chunks[iPlaceCPU].NumChunks(chunkBits); // Total Chunks on CPU
-      int iCurExeBuf = 0;  // buffer id that is being processing on GPU
+      int nGPUBuffer = AER_MAX_GPU_BUFFERS;                       // number of chunks that will be executed on GPU
+      int iPlaceCPU = m_nPlaces - 1;                              // based on current memory allocation, CPU place
+                                                                  // id is highest
+      int iGPUBuffer = 0;                                         // idx of GPU buffers
+      int nTotalChunks = m_Chunks[iPlaceCPU].NumChunks(chunkBits);// Total Chunks on CPU
+      int iCurExeBuf = 0;                                         // buffer id that is being processing on GPU
       std::cout << "ChunkBits in this OP: " << chunkBits << std::endl;
       std::cout << "Num Chunks on Host memory: " << nTotalChunks << std::endl;
       uint_t localMask, baseChunk;
       reg_t offsets(nBuf);
       reg_t chunkOffsets(nGPUBuffer);
       reg_t chunkIDs(nGPUBuffer);
-      std::vector<int> places(nGPUBuffer, iPlaceCPU);  // all buffers on GPU has chunk from CPU
-      size *= (nGPUBuffer / nChunk);  // increase execution parallelism
-      int nChunksOnGPU = 0;  // num chunks that are active on GPU
-      int iStream = 0;        // index of stream, currently using two streams
-      int num_streams = streams_size();   // number of streams
-      int nGPUBufferPerStream = nGPUBuffer / num_streams;
+      std::vector<int> places(nGPUBuffer, iPlaceCPU);             // all buffers on GPU has chunk from CPU
+      int nChunksOnGPU = 0;                                       // num chunks that are active on GPU
+      int iStream = 0;                                            // index of stream, currently using two streams
+      int num_streams = streams_size();                           // number of streams
+      int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
+      size *= (nGPUBufferPerStream / nChunk);                     // increase execution parallelism
 
-      noDataExchange = 0; // do not enable noDataExchange
+      noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
         for (iGPUBuffer = 0; iGPUBuffer < nTotalChunks; iGPUBuffer += nGPUBuffer) {
           // copy from H -> D
