@@ -2379,7 +2379,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
             //copy back
             nChunksOnGPU = iGPUBuffer % nGPUBufferPerStream ? iGPUBuffer % nGPUBufferPerStream : nGPUBufferPerStream;
-            for (i = 0; i < nChunksOnGPU; i++) {
+            for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
               std::cout << "Copying back to CPU ..." << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1, m_Streams[iStream]);
