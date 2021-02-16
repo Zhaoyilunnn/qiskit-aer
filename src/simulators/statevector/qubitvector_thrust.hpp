@@ -280,15 +280,22 @@ public:
 
 
 template <typename data_t>
-void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice)
+void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,
+                                           uint_t size,int isDevice)
 {
   if(isDevice){
     QubitVectorDeviceBuffer<data_t>* pSrcDev = (QubitVectorDeviceBuffer<data_t>*)pSrc;
-    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+//    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+                    thrust::raw_pointer_cast(pSrcDev->Buffer().data()+srcPos),
+                    size*sizeof(data_t),cudaMemcpyDeviceToHost,0);
   }
   else{
     QubitVectorHostBuffer<data_t>* pSrcHost = (QubitVectorHostBuffer<data_t>*)pSrc;
-    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+//    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+                    thrust::raw_pointer_cast(pSrcHost->Buffer().data()+srcPos),
+                    size*sizeof(data_t),cudaMemcpyHostToDevice,0);
   }
 }
 
@@ -305,15 +312,23 @@ void QubitVectorDeviceBuffer<data_t>::CopyOut(uint_t pos,data_t* pDest,uint_t si
 }
 
 template <typename data_t>
-void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice)
+void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,
+                                         uint_t size,int isDevice)
 {
   if(isDevice){
     QubitVectorDeviceBuffer<data_t>* pSrcDev = (QubitVectorDeviceBuffer<data_t>*)pSrc;
-    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+//    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+    //TODO: need revision if extends to multi-GPU
+    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+                    thrust::raw_pointer_cast(pSrcDev->Buffer().data()+srcPos),
+                    size*sizeof(data_t),cudaMemcpyDeviceToHost,0);
   }
   else{
     QubitVectorHostBuffer<data_t>* pSrcHost = (QubitVectorHostBuffer<data_t>*)pSrc;
-    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+//    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
+    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+                    thrust::raw_pointer_cast(pSrcHost->Buffer().data()+srcPos),
+                    size*sizeof(data_t),cudaMemcpyHostToDevice,0);
   }
 }
 
