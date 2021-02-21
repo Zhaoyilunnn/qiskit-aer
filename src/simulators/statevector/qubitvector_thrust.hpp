@@ -1361,7 +1361,7 @@ void QubitVectorThrust<data_t>::check_checkpoint() const {
 //------------------------------------------------------------------------------
 
 template <typename data_t>
-QubitVectorThrust<data_t>::QubitVectorThrust(size_t num_qubits) : num_qubits_(0), data_(nullptr), checkpoint_(0)
+QubitVectorThrust<data_t>::QubitVectorThrust(size_t num_qubits) : num_qubits_(0), entangled_flag_(0), data_(nullptr), checkpoint_(0)
 {
 #ifdef AER_DEBUG
   debug_fp = NULL;
