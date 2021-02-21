@@ -78,9 +78,9 @@ double mysecond()
 
 #define AER_DEFAULT_MATRIX_BITS   8
 
-#define AER_CHUNK_BITS        15
+#define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
-#define AER_MAX_GPU_BUFFERS   4096
+#define AER_MAX_GPU_BUFFERS   64
 #define AER_NUM_STREAM        2
 
 namespace AER {
@@ -1187,6 +1187,7 @@ protected:
   //-----------------------------------------------------------------------
   void update_entangled_state(const reg_t &qubits) const;
   size_t get_entangled_state() const;
+  int get_smallest_not_entangled() const;
 
   void set_matrix(const cvector_t<double>& mat) const;
   void set_params(const reg_t& prm) const;
@@ -2181,6 +2182,19 @@ size_t QubitVectorThrust<data_t>::get_entangled_state() const
 }
 
 template <typename data_t>
+int QubitVectorThrust<data_t>::get_smallest_not_entangled() const
+{
+  int res = 0;
+  while (entangled_flag_ & (1ull << res) != 0) {
+    ++res;
+    if (res >= m_maxChunkBits) {
+      break;
+    }
+  }
+  return res;
+}
+
+template <typename data_t>
 void QubitVectorThrust<data_t>::set_matrix(const cvector_t<double>& mat) const
 {
   uint_t i,size = mat.size();
@@ -2227,8 +2241,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   UpdateReferencedValue();
 
   //decreasing chunk-bits for fusion
-  chunkBits = m_maxChunkBits - (N - 1);
-//  chunkBits = m_maxChunkBits;  // fix chunkBits, no need to decrease
+//  chunkBits = m_maxChunkBits - (N - 1);
+  chunkBits = m_maxChunkBits;  // fix chunkBits, no need to decrease
   // std::cout << "Max Chunk bits: " << m_maxChunkBits << std::endl;
   // std::cout << "Num Qubits: " << chunkBits << std::endl;
 
@@ -2253,7 +2267,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     // chunkBits = num_qubits_;
     chunkBits = m_maxChunkBits; // currently set as maxChunkBits for GPU execution group by group
   }
-  
+
+  // set chunkBits as the smallest unentangled bit
+  chunkBits = get_smallest_not_entangled();
+
   // std::cout << "Num Qubits: " << chunkBits << std::endl;
 
   if(func.IsDiagonal()){
