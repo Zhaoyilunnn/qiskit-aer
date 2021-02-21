@@ -1153,7 +1153,7 @@ protected:
   //-----------------------------------------------------------------------
   size_t num_qubits_;
   size_t data_size_;
-  size_t entangled_flag_;         //indicate whether a qubit is entangled
+  mutable size_t entangled_flag_;         //indicate whether a qubit is entangled
   std::complex<data_t>* data_;    //this is allocated on host for reference
   std::complex<data_t>* checkpoint_;
 
@@ -1185,7 +1185,7 @@ protected:
   //-----------------------------------------------------------------------
   // Update entangled state
   //-----------------------------------------------------------------------
-  void update_entangled_state(const reg_t &qubits);
+  void update_entangled_state(const reg_t &qubits) const;
   size_t get_entangled_state() const;
 
   void set_matrix(const cvector_t<double>& mat) const;
@@ -2167,7 +2167,7 @@ uint_t QubitVectorThrust<data_t>::GetBaseChunkID(const uint_t gid,const reg_t& q
 }
 
 template <typename data_t>
-void QubitVectorThrust<data_t>::update_entangled_state(const reg_t &qubits)
+void QubitVectorThrust<data_t>::update_entangled_state(const reg_t &qubits) const
 {
   for (auto q : qubits) {
     entangled_flag_ |= (1ull << q);
