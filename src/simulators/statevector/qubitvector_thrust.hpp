@@ -2379,8 +2379,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               }
             }
 
-            std::cout << "Chunk ID on Host: " << chunkIDs[iCurExeBuf] << std::endl;
-            if (chunkIDs[iCurExeBuf] & entangled == chunkIDs[iCurExeBuf]) {
+//            std::cout << "Chunk ID on Host: " << chunkIDs[iCurExeBuf] << std::endl;
+            if ((chunkIDs[iCurExeBuf] & entangled) == chunkIDs[iCurExeBuf]) {
               is_copy = true;
             }
             ++iGPUBuffer;
