@@ -2167,14 +2167,16 @@ uint_t QubitVectorThrust<data_t>::GetBaseChunkID(const uint_t gid,const reg_t& q
 }
 
 template <typename data_t>
-void QubitVectorThrust<data_t>::update_entangled_state(const reg_t &qubits) {
+void QubitVectorThrust<data_t>::update_entangled_state(const reg_t &qubits)
+{
   for (auto q : qubits) {
     entangled_flag_ |= (1ull << q);
   }
 }
 
 template <typename data_t>
-size_t QubitVectorThrust<data_t>::get_entangled_state() {
+size_t QubitVectorThrust<data_t>::get_entangled_state() const
+{
   return entangled_flag_;
 }
 
