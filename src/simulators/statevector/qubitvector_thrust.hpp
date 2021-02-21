@@ -1153,6 +1153,7 @@ protected:
   //-----------------------------------------------------------------------
   size_t num_qubits_;
   size_t data_size_;
+  size_t entangled_flag_;         //indicate whether a qubit is entangled
   std::complex<data_t>* data_;    //this is allocated on host for reference
   std::complex<data_t>* checkpoint_;
 
@@ -1180,6 +1181,12 @@ protected:
   //-----------------------------------------------------------------------
   template <typename Function>
   double apply_function(Function func,const reg_t &qubits) const;
+
+  //-----------------------------------------------------------------------
+  // Update entangled state
+  //-----------------------------------------------------------------------
+  void update_entangled_state(const reg_t &qubits);
+  size_t get_entangled_state() const;
 
   void set_matrix(const cvector_t<double>& mat) const;
   void set_params(const reg_t& prm) const;
@@ -1721,6 +1728,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   size_t prev_num_qubits = num_qubits_;
   num_qubits_ = num_qubits;
   data_size_ = 1ull << num_qubits;
+  entangled_flag_ = 0;
   char* str;
   int i;
 
@@ -2159,6 +2167,18 @@ uint_t QubitVectorThrust<data_t>::GetBaseChunkID(const uint_t gid,const reg_t& q
 }
 
 template <typename data_t>
+void QubitVectorThrust<data_t>::update_entangled_state(const reg_t &qubits) {
+  for (auto q : qubits) {
+    entangled_flag_ |= (1ull << q);
+  }
+}
+
+template <typename data_t>
+size_t QubitVectorThrust<data_t>::get_entangled_state() {
+  return entangled_flag_;
+}
+
+template <typename data_t>
 void QubitVectorThrust<data_t>::set_matrix(const cvector_t<double>& mat) const
 {
   uint_t i,size = mat.size();
@@ -2205,8 +2225,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   UpdateReferencedValue();
 
   //decreasing chunk-bits for fusion
-  // chunkBits = m_maxChunkBits - (N - 1);
-  chunkBits = m_maxChunkBits;  // fix chunkBits, no need to decrease
+  chunkBits = m_maxChunkBits - (N - 1);
+//  chunkBits = m_maxChunkBits;  // fix chunkBits, no need to decrease
   // std::cout << "Max Chunk bits: " << m_maxChunkBits << std::endl;
   // std::cout << "Num Qubits: " << chunkBits << std::endl;
 
@@ -2278,6 +2298,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     controlFlag = controlMask;
   }
 
+  size_t entangled = get_entangled_state();
+  entangled >>= chunkBits;
+  bool is_copy = false;
+
 #pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
   {
     int iPlace = omp_get_thread_num();
@@ -2341,6 +2365,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             continue;
           }
 
+          is_copy = false;
           for (i = 0; i < nChunk; i++) {
             iCurExeBuf = iGPUBuffer % nGPUBuffer; // current chunk on GPU that is being written by Memcpy H->D
             chunkIDs[iCurExeBuf] = baseChunk;
@@ -2350,14 +2375,26 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                 chunkIDs[iCurExeBuf] += (1ull << (large_qubits[ib] - chunkBits));
               }
             }
-            std::cout << "Copying from CPU to GPU..." << std::endl;
-            m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
-                                 iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place
-            chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
+
+            if (chunkIDs[iCurExeBuf] & entangled == chunkIDs[iCurExeBuf]) {
+              is_copy = true;
+            }
             ++iGPUBuffer;
-            std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
           }
-          num_exe += nChunk;
+
+          iGPUBuffer -= nChunk;
+          if (is_copy) {
+            for (i = 0; i < nChunk; i++) {
+              iCurExeBuf = iGPUBuffer % nGPUBuffer;
+              std::cout << "Copying from CPU to GPU..." << std::endl;
+              m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
+                                   iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place
+              chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
+              ++iGPUBuffer;
+              std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
+            }
+            num_exe += nChunk;    // only when chunks are copied H->D, this value will be increased
+          }
 
           if (iGPUBuffer % nGPUBufferPerStream == 0) {
             nChunksOnGPU = iGPUBuffer % nGPUBufferPerStream ? iGPUBuffer % nGPUBufferPerStream : nGPUBufferPerStream;
@@ -2432,6 +2469,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       }
     }
   }
+
+  // After execution, update entanglement state
+  update_entangled_state(qubits);
 
 #ifdef AER_DEBUG
   if(func.Reduction())
