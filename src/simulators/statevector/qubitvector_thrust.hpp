@@ -2372,7 +2372,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           for (i = 0; i < nChunk; i++) {
             iCurExeBuf = iGPUBuffer % nGPUBuffer; // current chunk on GPU that is being written by Memcpy H->D
             chunkIDs[iCurExeBuf] = baseChunk;
-            std::cout << "Base Chunk: " << baseChunk << std::endl;
+//            std::cout << "Base Chunk: " << baseChunk << std::endl;
             for (ib = 0; ib < nLarge; ib++) {
               if ((i >> ib) & 1) {
                 chunkIDs[iCurExeBuf] += (1ull << (large_qubits[ib] - chunkBits));
