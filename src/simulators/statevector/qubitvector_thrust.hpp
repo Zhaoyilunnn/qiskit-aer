@@ -78,9 +78,9 @@ double mysecond()
 
 #define AER_DEFAULT_MATRIX_BITS   8
 
-#define AER_CHUNK_BITS        21
+#define AER_CHUNK_BITS        11
 #define AER_MAX_BUFFERS       2
-#define AER_MAX_GPU_BUFFERS   64
+#define AER_MAX_GPU_BUFFERS   65536
 #define AER_NUM_STREAM        2
 
 namespace AER {
@@ -2390,12 +2390,12 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           if (is_copy) {
             for (i = 0; i < nChunk; i++) {
               iCurExeBuf = iGPUBuffer % nGPUBuffer;
-              std::cout << "Copying from CPU to GPU..." << std::endl;
+//              std::cout << "Copying from CPU to GPU..." << std::endl;
               m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                    iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place
               chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
               ++iGPUBuffer;
-              std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
+//              std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
             }
             num_exe += nChunk;    // only when chunks are copied H->D, this value will be increased
           }
@@ -2427,7 +2427,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
             //copy back
             for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
-              std::cout << "Copying back to CPU ..." << std::endl;
+//              std::cout << "Copying back to CPU ..." << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1, m_Streams[iStream]);
             }
@@ -2464,7 +2464,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           //copy back
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
-            std::cout << "Copying back to CPU ..." << std::endl;
+//            std::cout << "Copying back to CPU ..." << std::endl;
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1, m_Streams[iStream]);
           }
