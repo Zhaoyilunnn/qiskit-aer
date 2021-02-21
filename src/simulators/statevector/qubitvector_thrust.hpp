@@ -2358,6 +2358,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         }
       } else { // copy chunk one-by-one
         for (iChunk = 0; iChunk < nTotalChunks; iChunk++) {
+
+          if (baseChunk > entangled) { // rest chunks will be zero, stop here
+            break;
+          }
+
           baseChunk = GetBaseChunkID(m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits), large_qubits, chunkBits);
           if (baseChunk != m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits)) {  //already calculated
             continue;
