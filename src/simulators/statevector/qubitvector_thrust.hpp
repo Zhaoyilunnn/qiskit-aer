@@ -2318,8 +2318,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   }
 
   size_t entangled = get_entangled_state();
-  entangled >>= chunkBits;
   std::cout << "Entanglement: " << entangled << std::endl;
+  entangled >>= chunkBits;
   bool is_copy = false;
 
 #pragma omp parallel if (num_qubits_ > omp_threshold_ && m_nPlaces > 1) private(iChunk,i,ib) num_threads(m_nPlaces)
