@@ -16,6 +16,9 @@
 #define _aer_transpile_fusion_hpp_
 
 #include <chrono>
+#include <unordered_set>
+#include <unordered_map>
+#include <queue>
 
 #include "transpile/circuitopt.hpp"
 #include "framework/avx2_detect.hpp"
@@ -32,6 +35,38 @@ using oplist_t = std::vector<op_t>;
 using opset_t = Operations::OpSet;
 using reg_t = std::vector<uint_t>;
 
+// data structure for circuit directed acyclic graph
+class circ_dag_vertex
+{
+  uint_t num_predecessors;
+  op_t op;
+  std::unordered_set<circ_dag_vertex*> descendants;
+  static uint_t entanglement;
+  static void update_entanglement(reg_t& qubits) {
+    for (uint_t q : qubits) {
+      entanglement |= (1ull << q);
+    }
+  }
+  static uint_t get_entanglement() {
+    return entanglement;
+  }
+};
+
+// define custom comparator
+struct compare_entanglement
+{
+  bool operator()(const circ_dag_vertex* lhs, const circ_dag_vertex* rhs) {
+    uint_t lhs_entanglement = circ_dag_vertex::get_entanglement();
+    uint_t rhs_entanglement = circ_dag_vertex::get_entanglement();
+    for (auto q : lhs->op.qubits) {
+      lhs_entanglement |= (1ull << q);
+    }
+    for (auto q : rhs->op.qubits) {
+      rhs_entanglement |= (1ull << q);
+    }
+    return lhs_entanglement > rhs_entanglement;
+  }
+};
 
 class Fusion : public CircuitOptimization {
 public:
@@ -91,6 +126,9 @@ private:
                         Method method) const;
 
   double get_cost(const op_t& op) const;
+
+  // reorder ops to delay entanglement
+  void reorder_circuit(Circuit& circ);
 
   void optimize_circuit(Circuit& circ,
                         Noise::NoiseModel& noise,
@@ -163,6 +201,64 @@ void Fusion::set_config(const json_t &config) {
 
   if (JSON::check_key("fusion_parallelization_threshold", config_))
     JSON::get_value(parallel_threshold_, "fusion_parallelization_threshold", config_);
+}
+
+void Fusion::reorder_circuit(Circuit& circ) {
+  oplist_t ops = circ.ops;
+  oplist_t new_ops;
+  std::vector<circ_dag_vertex*> gates_list;
+
+  // first build DAG
+  std::unordered_map<uint_t, circ_dag_vertex*> qubit_gate;
+
+  for (op_t &op : ops) {
+    circ_dag_vertex gate;
+    gate.num_predecessors = 0;
+    gate.op = op;
+    circ_dag_vertex* p_gate = &gate;
+
+    for (uint_t q : op.qubits) {
+      auto it = qubit_gate.find(q);
+      if (it != qubit_gate.end()) {
+        it->second->descendants.push_back(p_gate);
+        ++p_gate->num_predecessors;
+        it->second = p_gate;
+      } else {
+        qubit_gate.emplace(q, p_gate);
+      }
+    }
+    gates_list.push_back(p_gate);
+  }
+
+  // Traverse in topology order
+  // put gates that have no predecessors to a priority queue
+  std::priority_queue<circ_dag_vertex*> gates_queue;
+  size_t circ_dag_vertex::entanglement = 0;
+  for (auto g : gates_list) {
+    if (g->num_predecessors == 0) {
+      // push into queue
+      gates_queue.push(g);
+    }
+  }
+
+  while (!gates_queue.empty()) { // traverse until queue is empty
+    // add gate with highest priority to execution list
+    op_t g = gates_queue.top();
+    new_ops.push_back(g->op);
+    circ_dag_vertex::update_entanglement(g->qubits);
+    gates_queue.pop();
+
+    // then traverse descendants of this gate and push gates whose indegree is zero to queue
+    for (auto g_child : g->descendants) {
+      --g_child->num_predecessors;
+      if (g_child->num_predecessors == 0) {
+        gates_queue.push(g_child);
+      }
+    }
+  }
+
+  // replace circuit's ops
+  circ.ops = new_ops;
 }
 
 void Fusion::optimize_circuit(Circuit& circ,
