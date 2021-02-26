@@ -36,13 +36,13 @@ using opset_t = Operations::OpSet;
 using reg_t = std::vector<uint_t>;
 
 // data structure for circuit directed acyclic graph
-class circ_dag_vertex
+class CircDAGVertex
 {
   uint_t num_predecessors;
   op_t op;
-  std::unordered_set<circ_dag_vertex*> descendants;
+  std::vector<CircDAGVertex*> descendants;
   static uint_t entanglement;
-  static void update_entanglement(reg_t& qubits) {
+  static void update_entanglement(const reg_t& qubits) {
     for (uint_t q : qubits) {
       entanglement |= (1ull << q);
     }
@@ -55,9 +55,9 @@ class circ_dag_vertex
 // define custom comparator
 struct compare_entanglement
 {
-  bool operator()(const circ_dag_vertex* lhs, const circ_dag_vertex* rhs) {
-    uint_t lhs_entanglement = circ_dag_vertex::get_entanglement();
-    uint_t rhs_entanglement = circ_dag_vertex::get_entanglement();
+  bool operator()(const CircDAGVertex* lhs, const CircDAGVertex* rhs) {
+    uint_t lhs_entanglement = CircDAGVertex::get_entanglement();
+    uint_t rhs_entanglement = CircDAGVertex::get_entanglement();
     for (auto q : lhs->op.qubits) {
       lhs_entanglement |= (1ull << q);
     }
@@ -206,16 +206,16 @@ void Fusion::set_config(const json_t &config) {
 void Fusion::reorder_circuit(Circuit& circ) {
   oplist_t ops = circ.ops;
   oplist_t new_ops;
-  std::vector<circ_dag_vertex*> gates_list;
+  std::vector<CircDAGVertex*> gates_list;
 
   // first build DAG
-  std::unordered_map<uint_t, circ_dag_vertex*> qubit_gate;
+  std::unordered_map<uint_t, CircDAGVertex*> qubit_gate;
 
   for (op_t &op : ops) {
-    circ_dag_vertex gate;
+    CircDAGVertex gate;
     gate.num_predecessors = 0;
     gate.op = op;
-    circ_dag_vertex* p_gate = &gate;
+    CircDAGVertex* p_gate = &gate;
 
     for (uint_t q : op.qubits) {
       auto it = qubit_gate.find(q);
@@ -232,8 +232,8 @@ void Fusion::reorder_circuit(Circuit& circ) {
 
   // Traverse in topology order
   // put gates that have no predecessors to a priority queue
-  std::priority_queue<circ_dag_vertex*> gates_queue;
-  size_t circ_dag_vertex::entanglement = 0;
+  std::priority_queue<CircDAGVertex*> gates_queue;
+  size_t CircDAGVertex::entanglement = 0;
   for (auto g : gates_list) {
     if (g->num_predecessors == 0) {
       // push into queue
@@ -245,11 +245,13 @@ void Fusion::reorder_circuit(Circuit& circ) {
     // add gate with highest priority to execution list
     op_t g = gates_queue.top();
     new_ops.push_back(g->op);
-    circ_dag_vertex::update_entanglement(g->qubits);
     gates_queue.pop();
 
-    // then traverse descendants of this gate and push gates whose indegree is zero to queue
-    for (auto g_child : g->descendants) {
+    // then we update the entanglement 
+    CircDAGVertex::update_entanglement(g->qubits);
+
+    // then traverse descendants of this gate, if it's indegree is 0, we will push it to the queue 
+    for (auto* g_child : g->descendants) {
       --g_child->num_predecessors;
       if (g_child->num_predecessors == 0) {
         gates_queue.push(g_child);
