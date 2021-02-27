@@ -57,7 +57,7 @@ public:
 // initialize entanglement
 size_t CircDAGVertex::entanglement = 0;
 
-using sptr_t = std::unique_ptr<CircDAGVertex>;
+using sptr_t = std::shared_ptr<CircDAGVertex>;
 
 // define custom comparator
 struct compare_entanglement
@@ -221,7 +221,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
   sptr_t p_gate;
 
   for (op_t &op : ops) {
-    p_gate(new CircDAGVertex());
+    p_gate = sptr_t(new CircDAGVertex());
     p_gate->num_predecessors = 0;
     p_gate->op = op;
 
@@ -242,7 +242,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
   // Traverse in topology order
   // put gates that have no predecessors to a priority queue
   std::priority_queue<sptr_t , std::vector<sptr_t>, compare_entanglement> gates_queue;
-  for (auto g : gates_list) {
+  for (auto& g : gates_list) {
     if (g->num_predecessors == 0) {
       // push into queue
       gates_queue.push(g);
@@ -259,7 +259,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
     CircDAGVertex::update_entanglement(g->op.qubits);
 
     // then traverse descendants of this gate, if it's indegree is 0, we will push it to the queue 
-    for (auto* g_child : g->descendants) {
+    for (auto& g_child : g->descendants) {
       --g_child->num_predecessors;
       if (g_child->num_predecessors == 0) {
         gates_queue.push(g_child);
