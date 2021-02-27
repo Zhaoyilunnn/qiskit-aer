@@ -246,7 +246,7 @@ void Fusion::reorder_circuit(Circuit& circ) {
 
   while (!gates_queue.empty()) { // traverse until queue is empty
     // add gate with highest priority to execution list
-    op_t g = gates_queue.top();
+    CircDAGVertex* g = gates_queue.top();
     new_ops.push_back(g->op);
     gates_queue.pop();
 
