@@ -235,7 +235,6 @@ void Fusion::reorder_circuit(Circuit& circ) const
         qubit_gate.emplace(q, p_gate);
       }
     }
-    std::cout << "num preprocessors for cur gate: " << p_gate->num_predecessors << std::endl;
     gates_list.push_back(p_gate);
   }
 
@@ -265,6 +264,15 @@ void Fusion::reorder_circuit(Circuit& circ) const
         gates_queue.push(g_child);
       }
     }
+  }
+
+  // print order
+  for (auto& op : new_ops) {
+    std::cout << "Op: ";
+    for (auto& q : op.qubits) {
+      std::cout << q << " ";
+    }
+    std::cout << std::endl;
   }
 
   // replace circuit's ops
