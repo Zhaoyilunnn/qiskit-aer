@@ -132,7 +132,7 @@ private:
   double get_cost(const op_t& op) const;
 
   // reorder ops to delay entanglement
-  void reorder_circuit(Circuit& circ);
+  void reorder_circuit(Circuit& circ) const;
 
   void optimize_circuit(Circuit& circ,
                         Noise::NoiseModel& noise,
@@ -207,7 +207,8 @@ void Fusion::set_config(const json_t &config) {
     JSON::get_value(parallel_threshold_, "fusion_parallelization_threshold", config_);
 }
 
-void Fusion::reorder_circuit(Circuit& circ) {
+void Fusion::reorder_circuit(Circuit& circ) const
+{
   oplist_t ops = circ.ops;
   oplist_t new_ops;
   std::vector<CircDAGVertex*> gates_list;
