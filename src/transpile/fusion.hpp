@@ -239,7 +239,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
   // Traverse in topology order
   // put gates that have no predecessors to a priority queue
   std::priority_queue<CircDAGVertex*, std::vector<CircDAGVertex*>, compare_entanglement> gates_queue;
-  for (const auto* g : gates_list) {
+  for (auto g : gates_list) {
     if (g->num_predecessors == 0) {
       // push into queue
       gates_queue.push(g);
