@@ -38,6 +38,7 @@ using reg_t = std::vector<uint_t>;
 // data structure for circuit directed acyclic graph
 class CircDAGVertex
 {
+public:
   uint_t num_predecessors;
   op_t op;
   std::vector<CircDAGVertex*> descendants;
@@ -51,6 +52,9 @@ class CircDAGVertex
     return entanglement;
   }
 };
+
+// initialize entanglement
+size_t CircDAGVertex::entanglement = 0;
 
 // define custom comparator
 struct compare_entanglement
@@ -233,7 +237,6 @@ void Fusion::reorder_circuit(Circuit& circ) {
   // Traverse in topology order
   // put gates that have no predecessors to a priority queue
   std::priority_queue<CircDAGVertex*> gates_queue;
-  size_t CircDAGVertex::entanglement = 0;
   for (auto g : gates_list) {
     if (g->num_predecessors == 0) {
       // push into queue
