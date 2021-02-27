@@ -2171,7 +2171,7 @@ template <typename data_t>
 void QubitVectorThrust<data_t>::update_entangled_state(const reg_t &qubits) const
 {
   for (auto q : qubits) {
-    entangled_flag_ |= (1ull << q);
+    entangled_flag_ |= (1ull << (q+1));
   }
 }
 
