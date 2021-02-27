@@ -42,7 +42,7 @@ class CircDAGVertex
 public:
   uint_t num_predecessors;
   op_t op;
-  std::vector<CircDAGVertex*> descendants = {};
+  std::vector<std::shared_ptr<CircDAGVertex>> descendants = {};
   static uint_t entanglement;
   static void update_entanglement(const reg_t& qubits) {
     for (const auto q : qubits) {
