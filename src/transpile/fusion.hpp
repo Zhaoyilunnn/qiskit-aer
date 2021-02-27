@@ -44,7 +44,7 @@ public:
   std::vector<CircDAGVertex*> descendants = {};
   static uint_t entanglement;
   static void update_entanglement(const reg_t& qubits) {
-    for (uint_t q : qubits) {
+    for (const auto q : qubits) {
       entanglement |= (1ull << q);
     }
   }
@@ -238,7 +238,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
   // Traverse in topology order
   // put gates that have no predecessors to a priority queue
   std::priority_queue<CircDAGVertex*, std::vector<CircDAGVertex*>, compare_entanglement> gates_queue;
-  for (auto g : gates_list) {
+  for (const auto* g : gates_list) {
     if (g->num_predecessors == 0) {
       // push into queue
       gates_queue.push(g);
