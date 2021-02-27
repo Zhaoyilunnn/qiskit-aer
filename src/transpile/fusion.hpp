@@ -19,6 +19,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <queue>
+#include <memory>
 
 #include "transpile/circuitopt.hpp"
 #include "framework/avx2_detect.hpp"
@@ -56,10 +57,12 @@ public:
 // initialize entanglement
 size_t CircDAGVertex::entanglement = 0;
 
+using sptr_t = std::unique_ptr<CircDAGVertex>;
+
 // define custom comparator
 struct compare_entanglement
 {
-  bool operator()(const CircDAGVertex* lhs, const CircDAGVertex* rhs) {
+  bool operator()(const sptr_t& lhs, const sptr_t& rhs) {
     uint_t lhs_entanglement = CircDAGVertex::get_entanglement();
     uint_t rhs_entanglement = CircDAGVertex::get_entanglement();
     for (auto q : lhs->op.qubits) {
@@ -211,16 +214,16 @@ void Fusion::reorder_circuit(Circuit& circ) const
 {
   oplist_t ops = circ.ops;
   oplist_t new_ops;
-  std::vector<CircDAGVertex*> gates_list;
+  std::vector<sptr_t> gates_list;
 
   // first build DAG
-  std::unordered_map<uint_t, CircDAGVertex*> qubit_gate;
+  std::unordered_map<uint_t, sptr_t> qubit_gate;
+  sptr_t p_gate;
 
   for (op_t &op : ops) {
-    CircDAGVertex gate;
-    gate.num_predecessors = 0;
-    gate.op = op;
-    CircDAGVertex* p_gate = &gate;
+    p_gate(new CircDAGVertex());
+    p_gate->num_predecessors = 0;
+    p_gate->op = op;
 
     for (uint_t q : op.qubits) {
       auto it = qubit_gate.find(q);
@@ -238,7 +241,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
 
   // Traverse in topology order
   // put gates that have no predecessors to a priority queue
-  std::priority_queue<CircDAGVertex*, std::vector<CircDAGVertex*>, compare_entanglement> gates_queue;
+  std::priority_queue<sptr_t , std::vector<sptr_t>, compare_entanglement> gates_queue;
   for (auto g : gates_list) {
     if (g->num_predecessors == 0) {
       // push into queue
@@ -248,7 +251,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
 
   while (!gates_queue.empty()) { // traverse until queue is empty
     // add gate with highest priority to execution list
-    CircDAGVertex* g = gates_queue.top();
+    sptr_t g = gates_queue.top();
     new_ops.push_back(g->op);
     gates_queue.pop();
 
