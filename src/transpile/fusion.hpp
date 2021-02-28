@@ -71,8 +71,8 @@ using sptr_t = std::shared_ptr<CircDAGVertex>;
 struct compare_entanglement
 {
   bool operator()(const sptr_t& lhs, const sptr_t& rhs) {
-    uint_t lhs_entanglement = CircDAGVertex::get_entanglement();
-    uint_t rhs_entanglement = CircDAGVertex::get_entanglement();
+    uint_t lhs_entanglement = CircDAGVertex::get_num_entangled_qubits();
+    uint_t rhs_entanglement = CircDAGVertex::get_num_entangled_qubits();
     auto entangled_set = CircDAGVertex::get_set_entangled_qubits();
     for (auto q : lhs->op.qubits) {
       if (entangled_set.find(q) == entangled_set.end()) {
