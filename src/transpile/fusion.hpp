@@ -285,7 +285,7 @@ void Fusion::optimize_circuit(Circuit& circ,
                               ExperimentResult &result) const {
 
   // first reorder circuit
-  reorder_circuit(circ);
+//  reorder_circuit(circ);
 
   // Start timer
   using clock_t = std::chrono::high_resolution_clock;
@@ -368,6 +368,9 @@ void Fusion::optimize_circuit(Circuit& circ,
     if (verbose)
       result.metadata.add(circ.ops, "fusion", "output_ops");
   }
+
+  // reorder after fusion
+  reorder_circuit(circ);
 }
 
 void Fusion::optimize_circuit(Circuit& circ,
