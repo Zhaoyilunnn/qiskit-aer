@@ -43,19 +43,27 @@ public:
   uint_t num_predecessors;
   op_t op;
   std::vector<std::shared_ptr<CircDAGVertex>> descendants = {};
-  static uint_t entanglement;
-  static void update_entanglement(const reg_t& qubits) {
+  static uint_t num_entangled_qubits;
+  static std::unordered_set<uint_t> set_entangled_qubits;
+  static void update_num_entangled_qubits(const reg_t& qubits) {
     for (const auto q : qubits) {
-      entanglement |= (1ull << q);
+      if (set_entangled_qubits.find(q) == set_entangled_qubits.end()) {
+        ++num_entangled_qubits;
+        set_entangled_qubits.insert(q);
+      }
     }
   }
-  static uint_t get_entanglement() {
-    return entanglement;
+  static uint_t get_num_entangled_qubits() {
+    return num_entangled_qubits;
+  }
+  static std::unordered_set<uint_t> get_set_entangled_qubits() {
+    return set_entangled_qubits;
   }
 };
 
 // initialize entanglement
-size_t CircDAGVertex::entanglement = 0;
+size_t CircDAGVertex::num_entangled_qubits = 0;
+std::unordered_set<uint_t> CircDAGVertex::set_entangled_qubits;
 
 using sptr_t = std::shared_ptr<CircDAGVertex>;
 
@@ -65,11 +73,16 @@ struct compare_entanglement
   bool operator()(const sptr_t& lhs, const sptr_t& rhs) {
     uint_t lhs_entanglement = CircDAGVertex::get_entanglement();
     uint_t rhs_entanglement = CircDAGVertex::get_entanglement();
+    auto entangled_set = CircDAGVertex::get_set_entangled_qubits();
     for (auto q : lhs->op.qubits) {
-      lhs_entanglement |= (1ull << q);
+      if (entangled_set.find(q) == entangled_set.end()) {
+        ++lhs_entanglement;
+      }
     }
     for (auto q : rhs->op.qubits) {
-      rhs_entanglement |= (1ull << q);
+      if (entangled_set.find(q) == entangled_set.end()) {
+        ++rhs_entanglement;
+      }
     }
     return lhs_entanglement > rhs_entanglement;
   }
