@@ -268,7 +268,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
     gates_queue.pop();
 
     // then we update the entanglement 
-    CircDAGVertex::update_entanglement(g->op.qubits);
+    CircDAGVertex::update_num_entangled_qubits(g->op.qubits);
 
     // then traverse descendants of this gate, if it's indegree is 0, we will push it to the queue 
     for (auto& g_child : g->descendants) {
