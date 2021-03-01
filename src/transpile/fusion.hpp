@@ -284,7 +284,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
   circ.ops = new_ops;
 }
 
-void Fusion::print_order(int &circ) const
+void Fusion::print_order(Circuit &circ) const
 {
   // print order
   for (auto& op : circ.ops) {
