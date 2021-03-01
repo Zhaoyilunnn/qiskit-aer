@@ -43,8 +43,19 @@ public:
   uint_t num_predecessors;
   op_t op;
   std::vector<std::shared_ptr<CircDAGVertex>> descendants = {};
+
+  // compute cost if add current gate to execution list
+  void get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uint_t>& entangled_qubits) const;
+
+  // how many layers to look ahead
+  static uint_t window_size;
   static uint_t num_entangled_qubits;
   static std::unordered_set<uint_t> set_entangled_qubits;
+
+  static uint_t get_window_size() {
+    return window_size;
+  }
+
   static void update_num_entangled_qubits(const reg_t& qubits) {
     for (const auto q : qubits) {
       if (set_entangled_qubits.find(q) == set_entangled_qubits.end()) {
@@ -53,9 +64,11 @@ public:
       }
     }
   }
+
   static uint_t get_num_entangled_qubits() {
     return num_entangled_qubits;
   }
+
   static std::unordered_set<uint_t> get_set_entangled_qubits() {
     return set_entangled_qubits;
   }
@@ -64,8 +77,29 @@ public:
 // initialize entanglement
 size_t CircDAGVertex::num_entangled_qubits = 0;
 std::unordered_set<uint_t> CircDAGVertex::set_entangled_qubits;
+uint_t CircDAGVertex::window_size = 1;
 
 using sptr_t = std::shared_ptr<CircDAGVertex>;
+
+void CircDAGVertex::get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uint_t>& entangled_qubits) const
+{
+  if (layer > window_size) {
+    return;
+  }
+  for (auto& q : op.qubits) {
+    if (entangled_qubits.find(q) == entangled_qubits.end()) {
+      ++cost;
+      entangled_qubits.insert(q);
+    }
+  }
+  ++layer;
+  for (auto& g : descendants) {
+    if (g->num_predecessors == 1) {
+      g->get_cost(cost, layer, entangled_qubits);
+    }
+  }
+}
+
 
 // define custom comparator
 struct compare_entanglement
@@ -74,16 +108,17 @@ struct compare_entanglement
     uint_t lhs_entanglement = CircDAGVertex::get_num_entangled_qubits();
     uint_t rhs_entanglement = CircDAGVertex::get_num_entangled_qubits();
     auto entangled_set = CircDAGVertex::get_set_entangled_qubits();
-    for (auto q : lhs->op.qubits) {
-      if (entangled_set.find(q) == entangled_set.end()) {
-        ++lhs_entanglement;
-      }
-    }
-    for (auto q : rhs->op.qubits) {
-      if (entangled_set.find(q) == entangled_set.end()) {
-        ++rhs_entanglement;
-      }
-    }
+
+    uint_t cost = 0, layer = 0;
+    lhs->get_cost(cost, layer, entangled_set);
+    lhs_entanglement += cost;
+
+    cost = 0;
+    layer = 0;
+    entangled_set = CircDAGVertex::get_set_entangled_qubits();
+    rhs->get_cost(cost, layer, entangled_set);
+    rhs_entanglement += cost;
+
     return lhs_entanglement > rhs_entanglement;
   }
 };
