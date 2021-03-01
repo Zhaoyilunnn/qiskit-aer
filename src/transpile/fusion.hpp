@@ -149,6 +149,7 @@ private:
 
   // reorder ops to delay entanglement
   void reorder_circuit(Circuit& circ) const;
+  void print_order(Circuit& circ) const;
 
   void optimize_circuit(Circuit& circ,
                         Noise::NoiseModel& noise,
@@ -279,17 +280,20 @@ void Fusion::reorder_circuit(Circuit& circ) const
     }
   }
 
+  // replace circuit's ops
+  circ.ops = new_ops;
+}
+
+void Fusion::print_order(int &circ) const
+{
   // print order
-  for (auto& op : new_ops) {
+  for (auto& op : circ.ops) {
     std::cout << "Op: ";
     for (auto& q : op.qubits) {
       std::cout << q << " ";
     }
     std::cout << std::endl;
   }
-
-  // replace circuit's ops
-  circ.ops = new_ops;
 }
 
 void Fusion::optimize_circuit(Circuit& circ,
@@ -382,8 +386,12 @@ void Fusion::optimize_circuit(Circuit& circ,
       result.metadata.add(circ.ops, "fusion", "output_ops");
   }
 
+  std::cout << "Order before reorder" << std::endl;
+  print_order(circ);
   // reorder after fusion
   reorder_circuit(circ);
+  std::cout << "Order after reorder" << std::endl;
+  print_order(circ);
 }
 
 void Fusion::optimize_circuit(Circuit& circ,
