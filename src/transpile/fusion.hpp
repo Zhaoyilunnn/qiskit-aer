@@ -117,6 +117,10 @@ struct compare_entanglement
     layer = 0;
     entangled_set = CircDAGVertex::get_set_entangled_qubits();
     rhs->get_cost(cost, layer, entangled_set);
+    if (layer <= CircDAGVertex::window_size) {
+      // increase cost if current gate has not enough descendants
+      cost += 10;
+    }
     rhs_entanglement += cost;
 
     return lhs_entanglement > rhs_entanglement;
