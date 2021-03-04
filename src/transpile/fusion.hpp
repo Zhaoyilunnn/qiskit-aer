@@ -344,86 +344,86 @@ void Fusion::optimize_circuit(Circuit& circ,
 //  reorder_circuit(circ);
 
   // Start timer
-  using clock_t = std::chrono::high_resolution_clock;
-  auto timer_start = clock_t::now();
-
-  // Check if fusion should be skipped
-  if (!active || !allowed_opset.contains(optype_t::matrix)) {
-    result.metadata.add(false, "fusion", "enabled");
-    return;
-  }
-
-  result.metadata.add(true, "fusion", "enabled");
-  result.metadata.add(threshold, "fusion", "threshold");
-  result.metadata.add(cost_factor, "fusion", "cost_factor");
-  result.metadata.add(max_qubit, "fusion", "max_fused_qubits");
-
-  // Check qubit threshold
-  if (circ.num_qubits <= threshold || circ.ops.size() < 2) {
-    result.metadata.add(false, "fusion", "applied");
-    return;
-  }
-  // Determine fusion method
-  // TODO: Support Kraus fusion method
-  Method method = Method::unitary;
-  if (allow_superop && allowed_opset.contains(optype_t::superop) &&
-      (circ.opset().contains(optype_t::kraus)
-       || circ.opset().contains(optype_t::superop)
-       || circ.opset().contains(optype_t::reset))) {
-    method = Method::superop;
-  } else if (allow_kraus && allowed_opset.contains(optype_t::kraus) &&
-      (circ.opset().contains(optype_t::kraus)
-       || circ.opset().contains(optype_t::superop))) {
-    method = Method::kraus;
-  }
-  if (method == Method::unitary) {
-    result.metadata.add("unitary", "fusion", "method");
-  } else if (method == Method::superop) {
-    result.metadata.add("superop", "fusion", "method");
-  } else if (method == Method::kraus) {
-    result.metadata.add("kraus", "fusion", "method");
-  }
-
-  if (circ.ops.size() < parallel_threshold_ || parallelization_ <= 1) {
-    optimize_circuit(circ, noise, allowed_opset, 0, circ.ops.size());
-  } else {
-    // determine unit for each OMP thread
-    int_t unit = circ.ops.size() / parallelization_;
-    if (circ.ops.size() % parallelization_)
-      ++unit;
-
-#pragma omp parallel for if (parallelization_ > 1) num_threads(parallelization_)
-    for (int_t i = 0; i < parallelization_; i++) {
-      int_t start = unit * i;
-      int_t end = std::min(start + unit, (int_t) circ.ops.size());
-      optimize_circuit(circ, noise, allowed_opset, start, end);
-    }
-  }
-
-  result.metadata.add(parallelization_, "fusion", "parallelization");
-
-  auto timer_stop = clock_t::now();
-  result.metadata.add(std::chrono::duration<double>(timer_stop - timer_start).count(), "fusion", "time_taken");
-
-  size_t idx = 0;
-  for (size_t i = 0; i < circ.ops.size(); ++i) {
-    if (circ.ops[i].type != optype_t::nop) {
-      if (i != idx)
-        circ.ops[idx] = circ.ops[i];
-      ++idx;
-    }
-  }
-
-  if (idx == circ.ops.size()) {
-    result.metadata.add(false, "fusion", "applied");
-  } else {
-    circ.ops.erase(circ.ops.begin() + idx, circ.ops.end());
-    result.metadata.add(true, "fusion", "applied");
-    circ.set_params();
-
-    if (verbose)
-      result.metadata.add(circ.ops, "fusion", "output_ops");
-  }
+//  using clock_t = std::chrono::high_resolution_clock;
+//  auto timer_start = clock_t::now();
+//
+//  // Check if fusion should be skipped
+//  if (!active || !allowed_opset.contains(optype_t::matrix)) {
+//    result.metadata.add(false, "fusion", "enabled");
+//    return;
+//  }
+//
+//  result.metadata.add(true, "fusion", "enabled");
+//  result.metadata.add(threshold, "fusion", "threshold");
+//  result.metadata.add(cost_factor, "fusion", "cost_factor");
+//  result.metadata.add(max_qubit, "fusion", "max_fused_qubits");
+//
+//  // Check qubit threshold
+//  if (circ.num_qubits <= threshold || circ.ops.size() < 2) {
+//    result.metadata.add(false, "fusion", "applied");
+//    return;
+//  }
+//  // Determine fusion method
+//  // TODO: Support Kraus fusion method
+//  Method method = Method::unitary;
+//  if (allow_superop && allowed_opset.contains(optype_t::superop) &&
+//      (circ.opset().contains(optype_t::kraus)
+//       || circ.opset().contains(optype_t::superop)
+//       || circ.opset().contains(optype_t::reset))) {
+//    method = Method::superop;
+//  } else if (allow_kraus && allowed_opset.contains(optype_t::kraus) &&
+//      (circ.opset().contains(optype_t::kraus)
+//       || circ.opset().contains(optype_t::superop))) {
+//    method = Method::kraus;
+//  }
+//  if (method == Method::unitary) {
+//    result.metadata.add("unitary", "fusion", "method");
+//  } else if (method == Method::superop) {
+//    result.metadata.add("superop", "fusion", "method");
+//  } else if (method == Method::kraus) {
+//    result.metadata.add("kraus", "fusion", "method");
+//  }
+//
+//  if (circ.ops.size() < parallel_threshold_ || parallelization_ <= 1) {
+//    optimize_circuit(circ, noise, allowed_opset, 0, circ.ops.size());
+//  } else {
+//    // determine unit for each OMP thread
+//    int_t unit = circ.ops.size() / parallelization_;
+//    if (circ.ops.size() % parallelization_)
+//      ++unit;
+//
+//#pragma omp parallel for if (parallelization_ > 1) num_threads(parallelization_)
+//    for (int_t i = 0; i < parallelization_; i++) {
+//      int_t start = unit * i;
+//      int_t end = std::min(start + unit, (int_t) circ.ops.size());
+//      optimize_circuit(circ, noise, allowed_opset, start, end);
+//    }
+//  }
+//
+//  result.metadata.add(parallelization_, "fusion", "parallelization");
+//
+//  auto timer_stop = clock_t::now();
+//  result.metadata.add(std::chrono::duration<double>(timer_stop - timer_start).count(), "fusion", "time_taken");
+//
+//  size_t idx = 0;
+//  for (size_t i = 0; i < circ.ops.size(); ++i) {
+//    if (circ.ops[i].type != optype_t::nop) {
+//      if (i != idx)
+//        circ.ops[idx] = circ.ops[i];
+//      ++idx;
+//    }
+//  }
+//
+//  if (idx == circ.ops.size()) {
+//    result.metadata.add(false, "fusion", "applied");
+//  } else {
+//    circ.ops.erase(circ.ops.begin() + idx, circ.ops.end());
+//    result.metadata.add(true, "fusion", "applied");
+//    circ.set_params();
+//
+//    if (verbose)
+//      result.metadata.add(circ.ops, "fusion", "output_ops");
+//  }
 
   std::cout << "Order before reorder" << std::endl;
   print_order(circ);
