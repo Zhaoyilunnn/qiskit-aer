@@ -349,7 +349,7 @@ void Fusion::reorder_circuit(Circuit& circ) const
     for (auto& g_child : g->descendants) {
       --g_child->num_predecessors;
       if (g_child->num_predecessors == 0) {
-        gates_queue.push(g_child);
+        gates_queue.push_back(g_child);
       }
     }
   }
