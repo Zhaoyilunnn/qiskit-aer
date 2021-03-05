@@ -47,6 +47,9 @@ public:
   // compute cost if add current gate to execution list
   void get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uint_t>& entangled_qubits) const;
 
+  // compute sum qubits index for involved qubits
+  uint_t get_involved_qubits_sum() const;
+
   // how many layers to look ahead
   static uint_t window_size;
   static uint_t num_entangled_qubits;
@@ -98,6 +101,15 @@ void CircDAGVertex::get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uin
       g->get_cost(cost, layer, entangled_qubits);
     }
   }
+}
+
+uint_t CircDAGVertex::get_involved_qubits_sum() const
+{
+  uint_t res = 0;
+  for (auto & q : op.qubits) {
+    res += q;
+  }
+  return res;
 }
 
 
@@ -292,20 +304,43 @@ void Fusion::reorder_circuit(Circuit& circ) const
   }
 
   // Traverse in topology order
-  // put gates that have no predecessors to a priority queue
-  std::priority_queue<sptr_t , std::vector<sptr_t>, compare_entanglement> gates_queue;
+  // put gates that have no predecessors to an execution list
+  std::vector<sptr_t> gates_queue;
+
   for (auto& g : gates_list) {
     if (g->num_predecessors == 0) {
       // push into queue
-      gates_queue.push(g);
+      gates_queue.push_back(g);
     }
   }
 
   while (!gates_queue.empty()) { // traverse until queue is empty
-    // add gate with highest priority to execution list
-    sptr_t g = gates_queue.top();
+    // add gate with highest priority to new order
+    uint_t gate_idx = 0;
+    int min_cost = -1, min_qubits_sum = -1;
+    auto set_entangled = CircDAGVertex::get_set_entangled_qubits();
+    for (uint_t i = 0; i < gates_queue.size(); i++) { //find gate index that has minimum cost
+      uint_t cost = 0, layer = 0;
+      gates_queue[i]->get_cost(cost, layer, set_entangled);
+      if (layer <= CircDAGVertex::window_size) {
+        cost += 10;
+      }
+      if (cost < min_cost || min_cost < 0) {
+        gate_idx = i;
+        min_qubits_sum = gates_queue[i]->get_involved_qubits_sum();
+        min_cost = cost;
+      } else if (cost == min_cost) {
+        int cur_min_qubits = gates_queue[i]->get_involved_qubits_sum();
+        if (cur_min_qubits < min_qubits_sum) {
+          gate_idx = i;
+          min_qubits_sum = cur_min_qubits;
+          min_cost = cost;
+        }
+      }
+    }
+    sptr_t g = gates_queue[gate_idx];
     new_ops.push_back(g->op);
-    gates_queue.pop();
+    gates_queue.erase(gates_queue.begin() + gate_idx);
 
     // then we update the entanglement 
     CircDAGVertex::update_num_entangled_qubits(g->op.qubits);
