@@ -322,9 +322,9 @@ void Fusion::reorder_circuit(Circuit& circ) const
     for (uint_t i = 0; i < gates_queue.size(); i++) { //find gate index that has minimum cost
       uint_t cost = 0, layer = 0;
       gates_queue[i]->get_cost(cost, layer, set_entangled);
-      if (layer <= CircDAGVertex::window_size) {
-        cost += 10;
-      }
+//      if (layer <= CircDAGVertex::window_size) {
+//        cost += 10;
+//      }
       if (cost < min_cost || min_cost < 0) {
         gate_idx = i;
         min_qubits_sum = gates_queue[i]->get_involved_qubits_sum();
