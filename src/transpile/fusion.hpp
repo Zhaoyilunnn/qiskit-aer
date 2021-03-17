@@ -393,6 +393,7 @@ uint_t Fusion::get_gate_idx_min_cost(const std::vector<sptr_t> &gates_queue,
                                      const std::unordered_set<uint_t> &entangled_qubits) const
 {
   int min_cost = -1;
+  int min_look_ahead_cost = -1;
   uint_t gate_idx = -1;
   uint_t size = gates_queue.size();
   for (uint_t gid = 0; gid < size; ++gid) {
@@ -411,10 +412,17 @@ uint_t Fusion::get_gate_idx_min_cost(const std::vector<sptr_t> &gates_queue,
       }
     }
     gates_list.erase(gates_list.begin() + gid);
-    cur_cost += get_cost_from_list(gates_list, ent_qubits);
-    if (cur_cost < min_cost || min_cost < 0) {
+    int look_ahead_cost = get_cost_from_list(gates_list, ent_qubits);
+    if ((cur_cost+look_ahead_cost) < (min_cost+min_look_ahead_cost) || min_cost < 0) {
       min_cost = cur_cost;
+      min_look_ahead_cost = look_ahead_cost;
       gate_idx = gid;
+    } else if ((cur_cost+look_ahead_cost) == (min_cost+min_look_ahead_cost)) {
+      if (cur_cost < min_cost) {
+        min_cost = cur_cost;
+        min_look_ahead_cost = look_ahead_cost;
+        gate_idx = gid;
+      }
     }
   }
   return gate_idx;
