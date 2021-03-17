@@ -111,7 +111,7 @@ uint_t CircDAGVertex::get_cost_current(std::unordered_set<uint_t> &entangled_qub
   uint_t res = 0;
   for (auto& q : op.qubits) {
     if (entangled_qubits.find(q) == entangled_qubits.end()) {
-      ++cost;
+      ++res;
       entangled_qubits.insert(q);
     }
   }
