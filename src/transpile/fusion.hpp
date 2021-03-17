@@ -47,6 +47,9 @@ public:
   // compute cost if add current gate to execution list
   void get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uint_t>& entangled_qubits) const;
 
+  // compute cost if add current gate to execution list, only consider how many new qubits are involved for current gate
+  uint_t get_cost_current(std::unordered_set<uint_t>& entangled_qubits) const;
+
   // compute sum qubits index for involved qubits
   uint_t get_involved_qubits_sum() const;
 
@@ -101,6 +104,18 @@ void CircDAGVertex::get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uin
       g->get_cost(cost, layer, entangled_qubits);
     }
   }
+}
+
+uint_t CircDAGVertex::get_cost_current(int &entangled_qubits) const
+{
+  uint_t res = 0;
+  for (auto& q : op.qubits) {
+    if (entangled_qubits.find(q) == entangled_qubits.end()) {
+      ++cost;
+      entangled_qubits.insert(q);
+    }
+  }
+  return res;
 }
 
 uint_t CircDAGVertex::get_involved_qubits_sum() const
@@ -200,6 +215,16 @@ private:
 
   // reorder ops to delay entanglement
   void reorder_circuit(Circuit& circ) const;
+
+  // get gate index with minimum cost
+  uint_t get_gate_idx_min_cost(const std::vector<sptr_t>& gates_queue,
+                               const std::unordered_set<uint_t>& entangled_qubits) const;
+
+  // get cost by selecting one gate from current exe list
+  int get_cost_from_list(const std::vector<sptr_t>& gates_list,
+                         const std::unordered_set<uint_t>& ent_qubits) const;
+
+  // print gates order
   void print_order(Circuit& circ) const;
 
   void optimize_circuit(Circuit& circ,
@@ -316,28 +341,34 @@ void Fusion::reorder_circuit(Circuit& circ) const
 
   while (!gates_queue.empty()) { // traverse until queue is empty
     // add gate with highest priority to new order
-    uint_t gate_idx = 0;
+    uint_t gate_idx = 0; // index of gate that has highest priority
     int min_cost = -1, min_qubits_sum = -1;
     auto set_entangled = CircDAGVertex::get_set_entangled_qubits();
-    for (uint_t i = 0; i < gates_queue.size(); i++) { //find gate index that has minimum cost
-      uint_t cost = 0, layer = 0;
-      gates_queue[i]->get_cost(cost, layer, set_entangled);
-//      if (layer <= CircDAGVertex::window_size) {
-//        cost += 10;
+    uint_t wind_size = CircDAGVertex::get_window_size();
+    auto list_gates = gates_queue;
+
+//    for (uint_t i = 0; i < gates_queue.size(); i++) { //find gate index that has minimum cost
+//      uint_t cost = 0, layer = 0;
+//      gates_queue[i]->get_cost(cost, layer, set_entangled);
+////      if (layer <= CircDAGVertex::window_size) {
+////        cost += 10;
+////      }
+//      if (cost < min_cost || min_cost < 0) {
+//        gate_idx = i;
+//        min_qubits_sum = gates_queue[i]->get_involved_qubits_sum();
+//        min_cost = cost;
+//      } else if (cost == min_cost) {
+//        int cur_min_qubits = gates_queue[i]->get_involved_qubits_sum();
+//        if (cur_min_qubits < min_qubits_sum) {
+//          gate_idx = i;
+//          min_qubits_sum = cur_min_qubits;
+//          min_cost = cost;
+//        }
 //      }
-      if (cost < min_cost || min_cost < 0) {
-        gate_idx = i;
-        min_qubits_sum = gates_queue[i]->get_involved_qubits_sum();
-        min_cost = cost;
-      } else if (cost == min_cost) {
-        int cur_min_qubits = gates_queue[i]->get_involved_qubits_sum();
-        if (cur_min_qubits < min_qubits_sum) {
-          gate_idx = i;
-          min_qubits_sum = cur_min_qubits;
-          min_cost = cost;
-        }
-      }
-    }
+//    }
+
+    gate_idx = get_gate_idx_min_cost(gates_queue, set_entangled);
+
     sptr_t g = gates_queue[gate_idx];
     new_ops.push_back(g->op);
     gates_queue.erase(gates_queue.begin() + gate_idx);
@@ -356,6 +387,55 @@ void Fusion::reorder_circuit(Circuit& circ) const
 
   // replace circuit's ops
   circ.ops = new_ops;
+}
+
+uint_t Fusion::get_gate_idx_min_cost(const std::vector<sptr_t> &gates_queue,
+                                     const std::unordered_set<uint_t> &entangled_qubits) const
+{
+  int min_cost = -1;
+  uint_t gate_idx = -1;
+  uint_t size = gates_queue.size();
+  for (uint_t gid = 0; gid < size; ++gid) {
+    int cur_cost = 0;
+    auto gates_list = gates_queue;
+    auto ent_qubits = entangled_qubits;
+    for (auto& q : gates_list[gid]->op.qubits) {
+      if (ent_qubits.find(q) == ent_qubits.end()) {
+        ++cur_cost;
+        ent_qubits.insert(q);
+      }
+    }
+    for (auto& g : gates_list[gid]->descendants) {
+      if (g->num_predecessors == 1) {
+        gates_list.push_back(g);
+      }
+    }
+    gates_list.erase(gates_list.begin() + gid);
+    cur_cost += get_cost_from_list(gates_list, ent_qubits);
+    if (cur_cost < min_cost || min_cost < 0) {
+      min_cost = cur_cost;
+      gate_idx = gid;
+    }
+  }
+  return gate_idx;
+}
+
+int Fusion::get_cost_from_list(const std::vector<sptr_t>& gates_list,
+                               const std::unordered_set<uint_t>& ent_qubits) const
+{
+  int min_cost = -1;
+  for (uint_t gid = 0; gid < gates_list.size(); ++gid) {
+    int cur_cost = 0;
+    for (auto& q : gates_list[gid]->op.qubits) {
+      if (ent_qubits.find(q) == ent_qubits.end()) {
+        ++cur_cost;
+      }
+    }
+    if (cur_cost < min_cost || min_cost < 0) {
+      min_cost = cur_cost;
+    }
+  }
+  return min_cost;
 }
 
 void Fusion::print_order(Circuit &circ) const
