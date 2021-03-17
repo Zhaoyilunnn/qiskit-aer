@@ -106,7 +106,7 @@ void CircDAGVertex::get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uin
   }
 }
 
-uint_t CircDAGVertex::get_cost_current(int &entangled_qubits) const
+uint_t CircDAGVertex::get_cost_current(std::vector<uint_t> &entangled_qubits) const
 {
   uint_t res = 0;
   for (auto& q : op.qubits) {
