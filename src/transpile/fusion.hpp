@@ -145,7 +145,7 @@ public:
    */
   Fusion(uint_t _max_qubit = 5, uint_t _threshold = 14, double _cost_factor = 1.8)
     : max_qubit(_max_qubit), threshold(_threshold), cost_factor(_cost_factor) {}
-  
+
   // Allowed fusion methods:
   // - Unitary: only fuse gates into unitary instructions
   // - SuperOp: fuse gates, reset, kraus, and superops into kraus instuctions
@@ -252,7 +252,7 @@ void Fusion::set_config(const json_t &config) {
 
   if (JSON::check_key("fusion_cost_factor", config))
     JSON::get_value(cost_factor, "fusion_cost_factor", config);
-  
+
   if (JSON::check_key("fusion_allow_kraus", config))
     JSON::get_value(allow_kraus, "fusion_allow_kraus", config);
 
@@ -307,10 +307,10 @@ void Fusion::reorder_circuit(Circuit& circ) const
     new_ops.push_back(g->op);
     gates_queue.pop();
 
-    // then we update the entanglement 
+    // then we update the entanglement
     CircDAGVertex::update_num_entangled_qubits(g->op.qubits);
 
-    // then traverse descendants of this gate, if it's indegree is 0, we will push it to the queue 
+    // then traverse descendants of this gate, if it's indegree is 0, we will push it to the queue
     for (auto& g_child : g->descendants) {
       --g_child->num_predecessors;
       if (g_child->num_predecessors == 0) {
