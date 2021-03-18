@@ -47,6 +47,12 @@ public:
   // compute cost if add current gate to execution list
   void get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uint_t>& entangled_qubits) const;
 
+  // compute cost if add current gate to execution list, only consider how many new qubits are involved for current gate
+  uint_t get_cost_current(std::unordered_set<uint_t>& entangled_qubits) const;
+
+  // compute sum qubits index for involved qubits
+  uint_t get_involved_qubits_sum() const;
+
   // how many layers to look ahead
   static uint_t window_size;
   static uint_t num_entangled_qubits;
@@ -98,6 +104,27 @@ void CircDAGVertex::get_cost(uint_t& cost, uint_t& layer, std::unordered_set<uin
       g->get_cost(cost, layer, entangled_qubits);
     }
   }
+}
+
+uint_t CircDAGVertex::get_cost_current(std::unordered_set<uint_t> &entangled_qubits) const
+{
+  uint_t res = 0;
+  for (auto& q : op.qubits) {
+    if (entangled_qubits.find(q) == entangled_qubits.end()) {
+      ++res;
+      entangled_qubits.insert(q);
+    }
+  }
+  return res;
+}
+
+uint_t CircDAGVertex::get_involved_qubits_sum() const
+{
+  uint_t res = 0;
+  for (auto & q : op.qubits) {
+    res += q;
+  }
+  return res;
 }
 
 
@@ -188,6 +215,16 @@ private:
 
   // reorder ops to delay entanglement
   void reorder_circuit(Circuit& circ) const;
+
+  // get gate index with minimum cost
+  uint_t get_gate_idx_min_cost(const std::vector<sptr_t>& gates_queue,
+                               const std::unordered_set<uint_t>& entangled_qubits) const;
+
+  // get cost by selecting one gate from current exe list
+  int get_cost_from_list(const std::vector<sptr_t>& gates_list,
+                         const std::unordered_set<uint_t>& ent_qubits) const;
+
+  // print gates order
   void print_order(Circuit& circ) const;
 
   void optimize_circuit(Circuit& circ,
@@ -292,20 +329,49 @@ void Fusion::reorder_circuit(Circuit& circ) const
   }
 
   // Traverse in topology order
-  // put gates that have no predecessors to a priority queue
-  std::priority_queue<sptr_t , std::vector<sptr_t>, compare_entanglement> gates_queue;
+  // put gates that have no predecessors to an execution list
+  std::vector<sptr_t> gates_queue;
+
   for (auto& g : gates_list) {
     if (g->num_predecessors == 0) {
       // push into queue
-      gates_queue.push(g);
+      gates_queue.push_back(g);
     }
   }
 
   while (!gates_queue.empty()) { // traverse until queue is empty
-    // add gate with highest priority to execution list
-    sptr_t g = gates_queue.top();
+    // add gate with highest priority to new order
+    uint_t gate_idx = 0; // index of gate that has highest priority
+    int min_cost = -1, min_qubits_sum = -1;
+    auto set_entangled = CircDAGVertex::get_set_entangled_qubits();
+    uint_t wind_size = CircDAGVertex::get_window_size();
+    auto list_gates = gates_queue;
+
+//    for (uint_t i = 0; i < gates_queue.size(); i++) { //find gate index that has minimum cost
+//      uint_t cost = 0, layer = 0;
+//      gates_queue[i]->get_cost(cost, layer, set_entangled);
+////      if (layer <= CircDAGVertex::window_size) {
+////        cost += 10;
+////      }
+//      if (cost < min_cost || min_cost < 0) {
+//        gate_idx = i;
+//        min_qubits_sum = gates_queue[i]->get_involved_qubits_sum();
+//        min_cost = cost;
+//      } else if (cost == min_cost) {
+//        int cur_min_qubits = gates_queue[i]->get_involved_qubits_sum();
+//        if (cur_min_qubits < min_qubits_sum) {
+//          gate_idx = i;
+//          min_qubits_sum = cur_min_qubits;
+//          min_cost = cost;
+//        }
+//      }
+//    }
+
+    gate_idx = get_gate_idx_min_cost(gates_queue, set_entangled);
+
+    sptr_t g = gates_queue[gate_idx];
     new_ops.push_back(g->op);
-    gates_queue.pop();
+    gates_queue.erase(gates_queue.begin() + gate_idx);
 
     // then we update the entanglement
     CircDAGVertex::update_num_entangled_qubits(g->op.qubits);
@@ -314,13 +380,70 @@ void Fusion::reorder_circuit(Circuit& circ) const
     for (auto& g_child : g->descendants) {
       --g_child->num_predecessors;
       if (g_child->num_predecessors == 0) {
-        gates_queue.push(g_child);
+        gates_queue.push_back(g_child);
       }
     }
   }
 
   // replace circuit's ops
   circ.ops = new_ops;
+}
+
+uint_t Fusion::get_gate_idx_min_cost(const std::vector<sptr_t> &gates_queue,
+                                     const std::unordered_set<uint_t> &entangled_qubits) const
+{
+  int min_cost = -1;
+  int min_look_ahead_cost = -1;
+  uint_t gate_idx = -1;
+  uint_t size = gates_queue.size();
+  for (uint_t gid = 0; gid < size; ++gid) {
+    int cur_cost = 0;
+    auto gates_list = gates_queue;
+    auto ent_qubits = entangled_qubits;
+    for (auto& q : gates_list[gid]->op.qubits) {
+      if (ent_qubits.find(q) == ent_qubits.end()) {
+        ++cur_cost;
+        ent_qubits.insert(q);
+      }
+    }
+    for (auto& g : gates_list[gid]->descendants) {
+      if (g->num_predecessors == 1) {
+        gates_list.push_back(g);
+      }
+    }
+    gates_list.erase(gates_list.begin() + gid);
+    int look_ahead_cost = get_cost_from_list(gates_list, ent_qubits);
+    if ((cur_cost+look_ahead_cost) < (min_cost+min_look_ahead_cost) || min_cost < 0) {
+      min_cost = cur_cost;
+      min_look_ahead_cost = look_ahead_cost;
+      gate_idx = gid;
+    } else if ((cur_cost+look_ahead_cost) == (min_cost+min_look_ahead_cost)) {
+      if (cur_cost < min_cost) {
+        min_cost = cur_cost;
+        min_look_ahead_cost = look_ahead_cost;
+        gate_idx = gid;
+      }
+    }
+  }
+  return gate_idx;
+}
+
+int Fusion::get_cost_from_list(const std::vector<sptr_t>& gates_list,
+                               const std::unordered_set<uint_t>& ent_qubits) const
+{
+  int min_cost = -1;
+  for (uint_t gid = 0; gid < gates_list.size(); ++gid) {
+    int cur_cost = 0;
+    for (auto& q : gates_list[gid]->op.qubits) {
+      if (ent_qubits.find(q) == ent_qubits.end()) {
+        ++cur_cost;
+      }
+    }
+    if (cur_cost < min_cost || min_cost < 0) {
+      min_cost = cur_cost;
+    }
+  }
+  return min_cost;
 }
 
 void Fusion::print_order(Circuit &circ) const
@@ -344,86 +467,86 @@ void Fusion::optimize_circuit(Circuit& circ,
 //  reorder_circuit(circ);
 
   // Start timer
-  using clock_t = std::chrono::high_resolution_clock;
-  auto timer_start = clock_t::now();
-
-  // Check if fusion should be skipped
-  if (!active || !allowed_opset.contains(optype_t::matrix)) {
-    result.metadata.add(false, "fusion", "enabled");
-    return;
-  }
-
-  result.metadata.add(true, "fusion", "enabled");
-  result.metadata.add(threshold, "fusion", "threshold");
-  result.metadata.add(cost_factor, "fusion", "cost_factor");
-  result.metadata.add(max_qubit, "fusion", "max_fused_qubits");
-
-  // Check qubit threshold
-  if (circ.num_qubits <= threshold || circ.ops.size() < 2) {
-    result.metadata.add(false, "fusion", "applied");
-    return;
-  }
-  // Determine fusion method
-  // TODO: Support Kraus fusion method
-  Method method = Method::unitary;
-  if (allow_superop && allowed_opset.contains(optype_t::superop) &&
-      (circ.opset().contains(optype_t::kraus)
-       || circ.opset().contains(optype_t::superop)
-       || circ.opset().contains(optype_t::reset))) {
-    method = Method::superop;
-  } else if (allow_kraus && allowed_opset.contains(optype_t::kraus) &&
-      (circ.opset().contains(optype_t::kraus)
-       || circ.opset().contains(optype_t::superop))) {
-    method = Method::kraus;
-  }
-  if (method == Method::unitary) {
-    result.metadata.add("unitary", "fusion", "method");
-  } else if (method == Method::superop) {
-    result.metadata.add("superop", "fusion", "method");
-  } else if (method == Method::kraus) {
-    result.metadata.add("kraus", "fusion", "method");
-  }
-
-  if (circ.ops.size() < parallel_threshold_ || parallelization_ <= 1) {
-    optimize_circuit(circ, noise, allowed_opset, 0, circ.ops.size());
-  } else {
-    // determine unit for each OMP thread
-    int_t unit = circ.ops.size() / parallelization_;
-    if (circ.ops.size() % parallelization_)
-      ++unit;
-
-#pragma omp parallel for if (parallelization_ > 1) num_threads(parallelization_)
-    for (int_t i = 0; i < parallelization_; i++) {
-      int_t start = unit * i;
-      int_t end = std::min(start + unit, (int_t) circ.ops.size());
-      optimize_circuit(circ, noise, allowed_opset, start, end);
-    }
-  }
-
-  result.metadata.add(parallelization_, "fusion", "parallelization");
-
-  auto timer_stop = clock_t::now();
-  result.metadata.add(std::chrono::duration<double>(timer_stop - timer_start).count(), "fusion", "time_taken");
-
-  size_t idx = 0;
-  for (size_t i = 0; i < circ.ops.size(); ++i) {
-    if (circ.ops[i].type != optype_t::nop) {
-      if (i != idx)
-        circ.ops[idx] = circ.ops[i];
-      ++idx;
-    }
-  }
-
-  if (idx == circ.ops.size()) {
-    result.metadata.add(false, "fusion", "applied");
-  } else {
-    circ.ops.erase(circ.ops.begin() + idx, circ.ops.end());
-    result.metadata.add(true, "fusion", "applied");
-    circ.set_params();
-
-    if (verbose)
-      result.metadata.add(circ.ops, "fusion", "output_ops");
-  }
+//  using clock_t = std::chrono::high_resolution_clock;
+//  auto timer_start = clock_t::now();
+//
+//  // Check if fusion should be skipped
+//  if (!active || !allowed_opset.contains(optype_t::matrix)) {
+//    result.metadata.add(false, "fusion", "enabled");
+//    return;
+//  }
+//
+//  result.metadata.add(true, "fusion", "enabled");
+//  result.metadata.add(threshold, "fusion", "threshold");
+//  result.metadata.add(cost_factor, "fusion", "cost_factor");
+//  result.metadata.add(max_qubit, "fusion", "max_fused_qubits");
+//
+//  // Check qubit threshold
+//  if (circ.num_qubits <= threshold || circ.ops.size() < 2) {
+//    result.metadata.add(false, "fusion", "applied");
+//    return;
+//  }
+//  // Determine fusion method
+//  // TODO: Support Kraus fusion method
+//  Method method = Method::unitary;
+//  if (allow_superop && allowed_opset.contains(optype_t::superop) &&
+//      (circ.opset().contains(optype_t::kraus)
+//       || circ.opset().contains(optype_t::superop)
+//       || circ.opset().contains(optype_t::reset))) {
+//    method = Method::superop;
+//  } else if (allow_kraus && allowed_opset.contains(optype_t::kraus) &&
+//      (circ.opset().contains(optype_t::kraus)
+//       || circ.opset().contains(optype_t::superop))) {
+//    method = Method::kraus;
+//  }
+//  if (method == Method::unitary) {
+//    result.metadata.add("unitary", "fusion", "method");
+//  } else if (method == Method::superop) {
+//    result.metadata.add("superop", "fusion", "method");
+//  } else if (method == Method::kraus) {
+//    result.metadata.add("kraus", "fusion", "method");
+//  }
+//
+//  if (circ.ops.size() < parallel_threshold_ || parallelization_ <= 1) {
+//    optimize_circuit(circ, noise, allowed_opset, 0, circ.ops.size());
+//  } else {
+//    // determine unit for each OMP thread
+//    int_t unit = circ.ops.size() / parallelization_;
+//    if (circ.ops.size() % parallelization_)
+//      ++unit;
+//
+//#pragma omp parallel for if (parallelization_ > 1) num_threads(parallelization_)
+//    for (int_t i = 0; i < parallelization_; i++) {
+//      int_t start = unit * i;
+//      int_t end = std::min(start + unit, (int_t) circ.ops.size());
+//      optimize_circuit(circ, noise, allowed_opset, start, end);
+//    }
+//  }
+//
+//  result.metadata.add(parallelization_, "fusion", "parallelization");
+//
+//  auto timer_stop = clock_t::now();
+//  result.metadata.add(std::chrono::duration<double>(timer_stop - timer_start).count(), "fusion", "time_taken");
+//
+//  size_t idx = 0;
+//  for (size_t i = 0; i < circ.ops.size(); ++i) {
+//    if (circ.ops[i].type != optype_t::nop) {
+//      if (i != idx)
+//        circ.ops[idx] = circ.ops[i];
+//      ++idx;
+//    }
+//  }
+//
+//  if (idx == circ.ops.size()) {
+//    result.metadata.add(false, "fusion", "applied");
+//  } else {
+//    circ.ops.erase(circ.ops.begin() + idx, circ.ops.end());
+//    result.metadata.add(true, "fusion", "applied");
+//    circ.set_params();
+//
+//    if (verbose)
+//      result.metadata.add(circ.ops, "fusion", "output_ops");
+//  }
 
   std::cout << "Order before reorder" << std::endl;
   print_order(circ);
