@@ -2458,6 +2458,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream*nGPUBufferPerStream)<<chunkBits, localMask,
                                        enable_omp, m_Streams[iStream]);
             num_exe -= nChunksOnGPU;
+            std::cout << "Num Exe: " << num_exe << std::endl;
 
             //copy back
             for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
