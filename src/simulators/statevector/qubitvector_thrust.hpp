@@ -2208,10 +2208,10 @@ int QubitVectorThrust<data_t>::get_smallest_not_entangled() const
   while (entangled_flag_ & (1ull << res) != 0) {
     ++res;
     if (res >= m_maxChunkBits) {
-      break;
+      return res;
     }
   }
-  return res;
+  return res + 1;
 }
 
 template <typename data_t>
@@ -2279,11 +2279,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   }
   nSmall = N - nLarge - numCBits;
 
-  if(nLarge == 0){
-    noDataExchange = 1;
-    // chunkBits = num_qubits_;
-    chunkBits = m_maxChunkBits; // currently set as maxChunkBits for GPU execution group by group
-  }
+//  if(nLarge == 0){
+//    noDataExchange = 1;
+//    // chunkBits = num_qubits_;
+//    chunkBits = m_maxChunkBits; // currently set as maxChunkBits for GPU execution group by group
+//  }
 
   // set chunkBits as the smallest unentangled bit
   chunkBits = get_smallest_not_entangled();
