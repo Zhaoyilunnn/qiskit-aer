@@ -2271,8 +2271,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       nLarge++;
     }
   }
-  if (nLarge >= static_cast<int>(std::log2(AER_MAX_GPU_BUFFERS / 2))) {  // In this case we don't use dynamic
-                                                                              // chunkBits
+  if (nLarge >= static_cast<int>(std::log2(AER_MAX_GPU_BUFFERS / 2))) {// In this case we don't use dynamic chunkBits
     nLarge = 0;
     chunkBits = m_maxChunkBits;
     for(ib=numCBits;ib<N;ib++){
