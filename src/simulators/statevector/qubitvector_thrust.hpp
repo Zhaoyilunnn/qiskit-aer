@@ -939,7 +939,7 @@ public:
   int get_stream_id() const;
 
   // Set stream id
-  void set_stream_id(int stream_id);
+  void set_stream_id(int stream_id) const;
 
 
   // State initialization of a component
@@ -1613,7 +1613,7 @@ int QubitVectorThrust<data_t>::get_stream_id() const
 }
 
 template <typename data_t>
-void QubitVectorThrust<data_t>::set_stream_id(int stream_id)
+void QubitVectorThrust<data_t>::set_stream_id(int stream_id) const
 {
   stream_id_ = stream_id;
 }
