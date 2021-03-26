@@ -2271,6 +2271,16 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       nLarge++;
     }
   }
+  if (nLarge >= static_cast<int>(std::log2(AER_MAX_GPU_BUFFERS / 2))) {  // In this case we don't use dynamic
+                                                                              // chunkBits
+    chunkBits = m_maxChunkBits;
+    for(ib=numCBits;ib<N;ib++){
+      if(qubits[ib] >= chunkBits){
+        large_qubits.push_back(qubits[ib]);
+        nLarge++;
+      }
+    }
+  }
   nSmall = N - nLarge - numCBits;
 
 //  if(nLarge == 0){
@@ -2280,7 +2290,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 //  }
 
   // set chunkBits as the smallest unentangled bit
-  chunkBits = get_smallest_not_entangled();
+//  chunkBits = get_smallest_not_entangled();
 
   // std::cout << "Num Qubits: " << chunkBits << std::endl;
 
@@ -2339,7 +2349,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     if (iPlace < m_nPlaces - 1) { // currently only execute on GPU
       std::cout << "Place: " << iPlace << std::endl;
       int nGPUBuffer = AER_MAX_GPU_BUFFERS;                       // number of chunks that will be executed on GPU
-      nGPUBuffer >>= (m_maxChunkBits - chunkBits);                // change gpu buffer number according to chunkBits
+//      nGPUBuffer >>= (m_maxChunkBits - chunkBits);                // change gpu buffer number according to chunkBits
       int iPlaceCPU = m_nPlaces - 1;                              // based on current memory allocation, CPU place
                                                                   // id is highest
       int iGPUBuffer = 0;                                         // idx of GPU buffers
