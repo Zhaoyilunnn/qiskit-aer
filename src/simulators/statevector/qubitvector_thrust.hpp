@@ -935,6 +935,12 @@ public:
   // Destroy streams
   void destroy_streams();
 
+  // Get stream id
+  int get_stream_id() const;
+
+  // Set stream id
+  void set_stream_id(int stream_id);
+
 
   // State initialization of a component
   // Initialize the specified qubits to a desired statevector
@@ -1147,6 +1153,7 @@ protected:
   // Streams
   //-----------------------------------------------------------------------
   cudaStream_t m_Streams[AER_NUM_STREAM];
+  int stream_id_;
 
   //-----------------------------------------------------------------------
   // Protected data members
@@ -1597,6 +1604,16 @@ void QubitVectorThrust<data_t>::destroy_streams()
   for (int i = 0; i < num_streams; i++) {
     cudaStreamDestroy(m_Streams[i]);
   }
+}
+
+int QubitVectorThrust<data_t>::get_stream_id() const
+{
+  return stream_id_;
+}
+
+void QubitVectorThrust<data_t>::set_stream_id(int stream_id)
+{
+  stream_id_ = stream_id;
 }
 
 //------------------------------------------------------------------------------
@@ -2240,18 +2257,15 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   UpdateReferencedValue();
 
-  //decreasing chunk-bits for fusion
-//  chunkBits = m_maxChunkBits - (N - 1);
-  chunkBits = m_maxChunkBits;  // fix chunkBits, no need to decrease
-  // std::cout << "Max Chunk bits: " << m_maxChunkBits << std::endl;
-  // std::cout << "Num Qubits: " << chunkBits << std::endl;
+  // set chunkBits as the smallest unentangled bit
+  chunkBits = get_smallest_not_entangled();
 
-  //If no data exchange required execute along with all the state vectors
-  if(m_nPlaces == 1 || func.IsDiagonal()){    //note: for multi-process m_nPlaces == 1 is not valid
-    noDataExchange = 1;
-    // chunkBits = num_qubits_;
-    chunkBits = m_maxChunkBits;
-  }
+//  //If no data exchange required execute along with all the state vectors
+//  if(m_nPlaces == 1 || func.IsDiagonal()){    //note: for multi-process m_nPlaces == 1 is not valid
+//    noDataExchange = 1;
+//    // chunkBits = num_qubits_;
+//    chunkBits = m_maxChunkBits;
+//  }
 
   //count number of qubits which is larger than chunk size
   for(ib=numCBits;ib<N;ib++){
@@ -2341,7 +2355,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       reg_t chunkIDs(nGPUBuffer);
       std::vector<int> places(nGPUBuffer, iPlaceCPU);             // all buffers on GPU has chunk from CPU
       int nChunksOnGPU = 0;                                       // num chunks that are active on GPU
-      int iStream = 0;                                            // index of stream, currently using two streams
+      int iStream = get_stream_id();                                            // index of stream, currently using two streams
       int num_streams = streams_size();                           // number of streams
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
       int num_exe = 0;
@@ -2465,6 +2479,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           nChunksOnGPU = num_exe;
           // number of chunks that are active on GPU
           exe_size = size * (nChunksOnGPU / nChunk);  // chunks within a stream will be executed at the same time
+          std::cout << "Execute size: " << exe_size << std::endl;
 
           std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
           // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
@@ -2492,7 +2507,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                  chunkBits, 1, m_Streams[iStream]);
           }
         }
-
+        // Update stream index
+        set_stream_id(iStream);
       }
     }
   }
