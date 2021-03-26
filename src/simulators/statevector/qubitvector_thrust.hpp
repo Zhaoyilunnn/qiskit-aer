@@ -1606,11 +1606,13 @@ void QubitVectorThrust<data_t>::destroy_streams()
   }
 }
 
+template <typename data_t>
 int QubitVectorThrust<data_t>::get_stream_id() const
 {
   return stream_id_;
 }
 
+template <typename data_t>
 void QubitVectorThrust<data_t>::set_stream_id(int stream_id)
 {
   stream_id_ = stream_id;
