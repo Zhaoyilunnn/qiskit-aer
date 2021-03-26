@@ -2204,14 +2204,8 @@ size_t QubitVectorThrust<data_t>::get_entangled_state() const
 template <typename data_t>
 int QubitVectorThrust<data_t>::get_smallest_not_entangled() const
 {
-  int res = 0;
-  while (entangled_flag_ & (1ull << res) != 0) {
-    ++res;
-    if (res >= m_maxChunkBits) {
-      return res;
-    }
-  }
-  return res + 1;
+  int res = ~entangled_flag_ & (entangled_flag_ + 1);
+  return res + 1 >= m_maxChunkBits ? m_maxChunkBits : res + 1;
 }
 
 template <typename data_t>
