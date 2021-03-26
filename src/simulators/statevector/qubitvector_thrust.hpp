@@ -2459,18 +2459,20 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               localMask |= (1ull << ib); //currently all buffers are local
             }
 
-            //execute kernel
-            bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
-            if (func.Reduction())
-              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
-                                                 (iStream*nGPUBufferPerStream)<<chunkBits,
-                                                 localMask, enable_omp, m_Streams[iStream]);
-            else
-              m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream*nGPUBufferPerStream)<<chunkBits, localMask,
-                                       enable_omp, m_Streams[iStream]);
-            num_exe -= nChunksOnGPU;
-            std::cout << "Num Exe: " << num_exe << std::endl;
-
+            if (num_exe > 0) { // In this case, some chunks on GPU are not updated
+              //execute kernel
+              bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
+              if (func.Reduction())
+                ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
+                                                   (iStream * nGPUBufferPerStream) << chunkBits,
+                                                   localMask, enable_omp, m_Streams[iStream]);
+              else
+                m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream * nGPUBufferPerStream) << chunkBits,
+                                         localMask,
+                                         enable_omp, m_Streams[iStream]);
+              num_exe -= nChunksOnGPU;
+              std::cout << "Num Exe: " << num_exe << std::endl;
+            }
             //copy back
             for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
