@@ -1153,7 +1153,7 @@ protected:
   // Streams
   //-----------------------------------------------------------------------
   cudaStream_t m_Streams[AER_NUM_STREAM];
-  int stream_id_;
+  mutable int stream_id_;
 
   //-----------------------------------------------------------------------
   // Protected data members
