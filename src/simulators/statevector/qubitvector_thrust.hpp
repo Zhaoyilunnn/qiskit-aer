@@ -2472,16 +2472,15 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                          enable_omp, m_Streams[iStream]);
               num_exe -= nChunksOnGPU;
               std::cout << "Num Exe: " << num_exe << std::endl;
-            }
-            //copy back
-            for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
+              //copy back
+              for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
-              m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
-                                   chunkBits, 1, m_Streams[iStream]);
+                m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
+                                     chunkBits, 1, m_Streams[iStream]);
+              }
+              // Switch stream
+              iStream = (iStream + 1) % num_streams; // current stream
             }
-
-            // Switch stream
-            iStream = (iStream + 1) % num_streams; // current stream
           }
         }
 
