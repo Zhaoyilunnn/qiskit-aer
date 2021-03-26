@@ -1591,6 +1591,7 @@ void QubitVectorThrust<data_t>::create_streams()
   for (int i = 0; i < num_streams; i++) {
     cudaStreamCreate(&m_Streams[i]);
   }
+  stream_id_ = 0;
 }
 
 template <typename data_t>
