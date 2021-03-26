@@ -2274,7 +2274,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       nLarge++;
     }
   }
-  if (nLarge >= static_cast<int>(std::log2(AER_MAX_GPU_BUFFERS / 2))) {// In this case we don't use dynamic chunkBits
+
+  size_t entangled = get_entangled_state();
+  if ((entangled >> chunkBits) >= AER_MAX_GPU_BUFFERS) {// In this case we don't use dynamic chunkBits
     nLarge = 0;
     chunkBits = m_maxChunkBits;
     for(ib=numCBits;ib<N;ib++){
@@ -2341,7 +2343,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     controlFlag = controlMask;
   }
 
-  size_t entangled = get_entangled_state();
+//  entangled = get_entangled_state();
   std::cout << "Entanglement: " << entangled << std::endl;
   entangled >>= chunkBits;
   bool is_copy = false;
