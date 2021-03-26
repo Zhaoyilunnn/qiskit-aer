@@ -2339,6 +2339,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     if (iPlace < m_nPlaces - 1) { // currently only execute on GPU
       std::cout << "Place: " << iPlace << std::endl;
       int nGPUBuffer = AER_MAX_GPU_BUFFERS;                       // number of chunks that will be executed on GPU
+      nGPUBuffer >>= (m_maxChunkBits - chunkBits);
       int iPlaceCPU = m_nPlaces - 1;                              // based on current memory allocation, CPU place
                                                                   // id is highest
       int iGPUBuffer = 0;                                         // idx of GPU buffers
