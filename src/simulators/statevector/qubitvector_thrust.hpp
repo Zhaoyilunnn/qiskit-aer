@@ -2256,6 +2256,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   // set chunkBits as the smallest unentangled bit
   chunkBits = get_smallest_not_entangled();
+  if (chunkBits == 0) {
+    chunkBits++;
+  }
 
 //  //If no data exchange required execute along with all the state vectors
 //  if(m_nPlaces == 1 || func.IsDiagonal()){    //note: for multi-process m_nPlaces == 1 is not valid
