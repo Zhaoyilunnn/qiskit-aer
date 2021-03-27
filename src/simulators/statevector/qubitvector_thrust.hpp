@@ -935,6 +935,12 @@ public:
   // Destroy streams
   void destroy_streams();
 
+  // Get stream id
+  int get_stream_id() const;
+
+  // Set stream id
+  void set_stream_id(int stream_id) const;
+
 
   // State initialization of a component
   // Initialize the specified qubits to a desired statevector
@@ -1147,6 +1153,7 @@ protected:
   // Streams
   //-----------------------------------------------------------------------
   cudaStream_t m_Streams[AER_NUM_STREAM];
+  mutable int stream_id_;
 
   //-----------------------------------------------------------------------
   // Protected data members
@@ -1584,6 +1591,7 @@ void QubitVectorThrust<data_t>::create_streams()
   for (int i = 0; i < num_streams; i++) {
     cudaStreamCreate(&m_Streams[i]);
   }
+  stream_id_ = 0;
 }
 
 template <typename data_t>
@@ -1597,6 +1605,18 @@ void QubitVectorThrust<data_t>::destroy_streams()
   for (int i = 0; i < num_streams; i++) {
     cudaStreamDestroy(m_Streams[i]);
   }
+}
+
+template <typename data_t>
+int QubitVectorThrust<data_t>::get_stream_id() const
+{
+  return stream_id_;
+}
+
+template <typename data_t>
+void QubitVectorThrust<data_t>::set_stream_id(int stream_id) const
+{
+  stream_id_ = stream_id;
 }
 
 //------------------------------------------------------------------------------
@@ -2184,14 +2204,8 @@ size_t QubitVectorThrust<data_t>::get_entangled_state() const
 template <typename data_t>
 int QubitVectorThrust<data_t>::get_smallest_not_entangled() const
 {
-  int res = 0;
-  while (entangled_flag_ & (1ull << res) != 0) {
-    ++res;
-    if (res >= m_maxChunkBits) {
-      break;
-    }
-  }
-  return res;
+  int res = static_cast<int>(std::log2(~entangled_flag_ & (entangled_flag_ + 1)));
+  return res + 1 >= m_maxChunkBits ? m_maxChunkBits : res + 1;
 }
 
 template <typename data_t>
@@ -2240,18 +2254,18 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   UpdateReferencedValue();
 
-  //decreasing chunk-bits for fusion
-//  chunkBits = m_maxChunkBits - (N - 1);
-  chunkBits = m_maxChunkBits;  // fix chunkBits, no need to decrease
-  // std::cout << "Max Chunk bits: " << m_maxChunkBits << std::endl;
-  // std::cout << "Num Qubits: " << chunkBits << std::endl;
-
-  //If no data exchange required execute along with all the state vectors
-  if(m_nPlaces == 1 || func.IsDiagonal()){    //note: for multi-process m_nPlaces == 1 is not valid
-    noDataExchange = 1;
-    // chunkBits = num_qubits_;
-    chunkBits = m_maxChunkBits;
+  // set chunkBits as the smallest unentangled bit
+  chunkBits = get_smallest_not_entangled();
+  if (chunkBits == 0) {
+    chunkBits++;
   }
+
+//  //If no data exchange required execute along with all the state vectors
+//  if(m_nPlaces == 1 || func.IsDiagonal()){    //note: for multi-process m_nPlaces == 1 is not valid
+//    noDataExchange = 1;
+//    // chunkBits = num_qubits_;
+//    chunkBits = m_maxChunkBits;
+//  }
 
   //count number of qubits which is larger than chunk size
   for(ib=numCBits;ib<N;ib++){
@@ -2260,16 +2274,28 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       nLarge++;
     }
   }
+
+  size_t entangled = get_entangled_state();
+  if ((entangled >> chunkBits) >= AER_MAX_GPU_BUFFERS && chunkBits != m_maxChunkBits) {// In this case we don't use dynamic chunkBits
+    nLarge = 0;
+    chunkBits = m_maxChunkBits;
+    for(ib=numCBits;ib<N;ib++){
+      if(qubits[ib] >= chunkBits){
+        large_qubits.push_back(qubits[ib]);
+        nLarge++;
+      }
+    }
+  }
   nSmall = N - nLarge - numCBits;
 
-  if(nLarge == 0){
-    noDataExchange = 1;
-    // chunkBits = num_qubits_;
-    chunkBits = m_maxChunkBits; // currently set as maxChunkBits for GPU execution group by group
-  }
+//  if(nLarge == 0){
+//    noDataExchange = 1;
+//    // chunkBits = num_qubits_;
+//    chunkBits = m_maxChunkBits; // currently set as maxChunkBits for GPU execution group by group
+//  }
 
   // set chunkBits as the smallest unentangled bit
-  chunkBits = get_smallest_not_entangled();
+//  chunkBits = get_smallest_not_entangled();
 
   // std::cout << "Num Qubits: " << chunkBits << std::endl;
 
@@ -2317,7 +2343,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     controlFlag = controlMask;
   }
 
-  size_t entangled = get_entangled_state();
+//  entangled = get_entangled_state();
   std::cout << "Entanglement: " << entangled << std::endl;
   entangled >>= chunkBits;
   bool is_copy = false;
@@ -2328,6 +2354,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     if (iPlace < m_nPlaces - 1) { // currently only execute on GPU
       std::cout << "Place: " << iPlace << std::endl;
       int nGPUBuffer = AER_MAX_GPU_BUFFERS;                       // number of chunks that will be executed on GPU
+//      nGPUBuffer >>= (m_maxChunkBits - chunkBits);                // change gpu buffer number according to chunkBits
       int iPlaceCPU = m_nPlaces - 1;                              // based on current memory allocation, CPU place
                                                                   // id is highest
       int iGPUBuffer = 0;                                         // idx of GPU buffers
@@ -2341,7 +2368,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       reg_t chunkIDs(nGPUBuffer);
       std::vector<int> places(nGPUBuffer, iPlaceCPU);             // all buffers on GPU has chunk from CPU
       int nChunksOnGPU = 0;                                       // num chunks that are active on GPU
-      int iStream = 0;                                            // index of stream, currently using two streams
+      int iStream = get_stream_id();                                            // index of stream, currently using two streams
       int num_streams = streams_size();                           // number of streams
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
       int num_exe = 0;
@@ -2437,26 +2464,28 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               localMask |= (1ull << ib); //currently all buffers are local
             }
 
-            //execute kernel
-            bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
-            if (func.Reduction())
-              ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
-                                                 (iStream*nGPUBufferPerStream)<<chunkBits,
-                                                 localMask, enable_omp, m_Streams[iStream]);
-            else
-              m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream*nGPUBufferPerStream)<<chunkBits, localMask,
-                                       enable_omp, m_Streams[iStream]);
-            num_exe -= nChunksOnGPU;
-
-            //copy back
-            for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
+            if (num_exe > 0) { // In this case, some chunks on GPU are not updated
+              //execute kernel
+              bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
+              if (func.Reduction())
+                ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
+                                                   (iStream * nGPUBufferPerStream) << chunkBits,
+                                                   localMask, enable_omp, m_Streams[iStream]);
+              else
+                m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream * nGPUBufferPerStream) << chunkBits,
+                                         localMask,
+                                         enable_omp, m_Streams[iStream]);
+              num_exe -= nChunksOnGPU;
+              std::cout << "Num Exe: " << num_exe << std::endl;
+              //copy back
+              for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
-              m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
-                                   chunkBits, 1, m_Streams[iStream]);
+                m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
+                                     chunkBits, 1, m_Streams[iStream]);
+              }
+              // Switch stream
+              iStream = (iStream + 1) % num_streams; // current stream
             }
-
-            // Switch stream
-            iStream = (iStream + 1) % num_streams; // current stream
           }
         }
 
@@ -2465,6 +2494,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           nChunksOnGPU = num_exe;
           // number of chunks that are active on GPU
           exe_size = size * (nChunksOnGPU / nChunk);  // chunks within a stream will be executed at the same time
+          std::cout << "Execute size: " << exe_size << std::endl;
 
           std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
           // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
@@ -2492,7 +2522,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                  chunkBits, 1, m_Streams[iStream]);
           }
         }
-
+        // Update stream index
+        set_stream_id(iStream);
       }
     }
   }
