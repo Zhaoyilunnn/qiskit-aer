@@ -545,37 +545,12 @@ void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 
 //  // read in trace to cbuf
 //  int doubles = fread(cbuf, 8, MAX, stdin);
-  int doubles = m_Buffer.size();
+  int doubles = 2 * m_Buffer.size();  // The size of data to be compressed
 //  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
 
   // calculate required padding for last chunk
   int padding = ((doubles + WARPSIZE - 1) & -WARPSIZE) - doubles;
   doubles += padding;
-
-  // determine chunk assignments per warp
-  int per = (doubles + blocks * warpsperblock - 1) / (blocks * warpsperblock);
-  if (per < WARPSIZE) per = WARPSIZE;
-  per = (per + WARPSIZE - 1) & -WARPSIZE;
-  int curr = 0, before = 0, d = 0;
-  for (int i = 0; i < blocks * warpsperblock; i++) {
-    curr += per;
-    cut[i] = min(curr, doubles);
-    if (cut[i] - before > 0) {
-      d = cut[i] - before;
-    }
-    before = cut[i];
-  }
-
-  // set the pad values to ensure correct prediction
-  if (d <= WARPSIZE) {
-    for (int i = doubles - padding; i < doubles; i++) {
-      cbuf[i] = 0;
-    }
-  } else {
-    for (int i = doubles - padding; i < doubles; i++) {
-      cbuf[i] = cbuf[(i & -WARPSIZE) - (dimensionality - i % dimensionality)];
-    }
-  }
 
   // allocate GPU buffers
   ull *cbufl; // uncompressed data
@@ -596,6 +571,31 @@ void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   CudaTest("couldn't allocate offd");
 
   cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data()));
+
+  // determine chunk assignments per warp
+  int per = (doubles + blocks * warpsperblock - 1) / (blocks * warpsperblock);
+  if (per < WARPSIZE) per = WARPSIZE;
+  per = (per + WARPSIZE - 1) & -WARPSIZE;
+  int curr = 0, before = 0, d = 0;
+  for (int i = 0; i < blocks * warpsperblock; i++) {
+    curr += per;
+    cutl[i] = min(curr, doubles);
+    if (cutl[i] - before > 0) {
+      d = cutl[i] - before;
+    }
+    before = cutl[i];
+  }
+
+  // set the pad values to ensure correct prediction
+  if (d <= WARPSIZE) {
+    for (int i = doubles - padding; i < doubles; i++) {
+      cbufl[i] = 0;
+    }
+  } else {
+    for (int i = doubles - padding; i < doubles; i++) {
+      cbufl[i] = cbufl[(i & -WARPSIZE) - (dimensionality - i % dimensionality)];
+    }
+  }
 
   // copy buffer starting addresses (pointers) and values to constant memory
   if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
