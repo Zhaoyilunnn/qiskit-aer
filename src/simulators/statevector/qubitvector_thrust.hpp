@@ -117,6 +117,7 @@ __global__ void CompressionKernel()
   warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
   // prediction index within previous subchunk
   offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
+  printf("succeed prediction index within previous subchunk");
 
   // determine start and end of chunk to compress
   start = 0;
