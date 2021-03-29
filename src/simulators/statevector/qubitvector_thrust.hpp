@@ -546,7 +546,7 @@ void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 //  // read in trace to cbuf
 //  int doubles = fread(cbuf, 8, MAX, stdin);
   int doubles = m_Buffer.size();
-  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
+//  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
 
   // calculate required padding for last chunk
   int padding = ((doubles + WARPSIZE - 1) & -WARPSIZE) - doubles;
@@ -594,6 +594,8 @@ void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if (cudaSuccess != cudaMalloc((void **)&offl, sizeof(int) * blocks * warpsperblock))
     fprintf(stderr, "could not allocate offd\n");
   CudaTest("couldn't allocate offd");
+
+  cbufl = thrust::raw_pointer_cast(m_Buffer.data());
 
   // copy buffer starting addresses (pointers) and values to constant memory
   if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
