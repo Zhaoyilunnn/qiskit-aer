@@ -531,7 +531,7 @@ void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 //
 //  // read in trace to cbuf
 ////  int doubles = fread(cbuf, 8, MAX, stdin);
-  int doubles = m_size;
+  int doubles = m_Buffer.size();
 //  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
 //
 //  // calculate required padding for last chunk
