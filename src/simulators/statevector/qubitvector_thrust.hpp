@@ -633,8 +633,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   CudaTest("off copy from device failed");
 
   int sum_byte_compressed = 0;
-  for (int ic = 0; i < blocks*warpsperblock; i++) {
-    sum_byte_compressed += off[i];
+  for (int ic = 0; ic < blocks*warpsperblock; ic++) {
+    sum_byte_compressed += off[ic];
   }
   std::cout << "Num bytes after compression" << std::endl;
 
