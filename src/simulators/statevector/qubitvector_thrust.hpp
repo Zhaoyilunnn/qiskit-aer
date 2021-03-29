@@ -574,10 +574,11 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "could not allocate offd\n");
   CudaTest("couldn't allocate offd");
 
-  std::cout << "Finishe allocating mem" << std::endl;
+  std::cout << "Finished allocating mem" << std::endl;
 
   cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data()));
 
+  std::cout << "Finished converting number" << std::endl;
   // determine chunk assignments per warp
   int per = (doubles + blocks * warpsperblock - 1) / (blocks * warpsperblock);
   if (per < WARPSIZE) per = WARPSIZE;
