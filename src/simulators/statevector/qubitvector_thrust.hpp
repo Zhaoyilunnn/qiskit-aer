@@ -278,6 +278,20 @@ __global__ void DecompressionKernel()
 /************************************************************************************/
 
 
+static void CudaTest(char *msg)
+{
+  cudaError_t e;
+
+  cudaThreadSynchronize();
+  if (cudaSuccess != (e = cudaGetLastError())) {
+    fprintf(stderr, "%s: %d\n", msg, e);
+    fprintf(stderr, "%s\n", cudaGetErrorString(e));
+    exit(-1);
+  }
+}
+
+/************************************************************************************/
+
 namespace AER {
 namespace QV {
 
@@ -508,162 +522,162 @@ template <typename data_t>
 void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
 //  cudaMemcpyToSymbol(cbufd, thrust::raw_pointer_cast(m_Buffer.data()), sizeof(void *));
-//  int blocks = 28, warpsperblock = 18, dimensionality = 2;
-//  cudaGetLastError();  // reset error value
-//
-//  // allocate CPU buffers
-//  ull *cbuf = (ull *)malloc(sizeof(ull) * MAX); // uncompressed data
-//  if (cbuf == NULL) {
-//    fprintf(stderr, "cannot allocate cbuf\n"); exit(-1);
-//  }
-//  char *dbuf = (char *)malloc(sizeof(char) * ((MAX+1)/2*17)); // compressed data
-//  if (dbuf == NULL) {
-//    fprintf(stderr, "cannot allocate dbuf\n"); exit(-1);
-//  }
-//  int *cut = (int *)malloc(sizeof(int) * blocks * warpsperblock); // chunk boundaries
-//  if (cut == NULL) {
-//    fprintf(stderr, "cannot allocate cut\n"); exit(-1);
-//  }
-//  int *off = (int *)malloc(sizeof(int) * blocks * warpsperblock); // offset table
-//  if (off == NULL) {
-//    fprintf(stderr, "cannot allocate off\n"); exit(-1);
-//  }
-//
+  int blocks = 28, warpsperblock = 18, dimensionality = 2;
+  cudaGetLastError();  // reset error value
+
+  // allocate CPU buffers
+  ull *cbuf = (ull *)malloc(sizeof(ull) * MAX); // uncompressed data
+  if (cbuf == NULL) {
+    fprintf(stderr, "cannot allocate cbuf\n"); exit(-1);
+  }
+  char *dbuf = (char *)malloc(sizeof(char) * ((MAX+1)/2*17)); // compressed data
+  if (dbuf == NULL) {
+    fprintf(stderr, "cannot allocate dbuf\n"); exit(-1);
+  }
+  int *cut = (int *)malloc(sizeof(int) * blocks * warpsperblock); // chunk boundaries
+  if (cut == NULL) {
+    fprintf(stderr, "cannot allocate cut\n"); exit(-1);
+  }
+  int *off = (int *)malloc(sizeof(int) * blocks * warpsperblock); // offset table
+  if (off == NULL) {
+    fprintf(stderr, "cannot allocate off\n"); exit(-1);
+  }
+
 //  // read in trace to cbuf
-////  int doubles = fread(cbuf, 8, MAX, stdin);
+//  int doubles = fread(cbuf, 8, MAX, stdin);
   int doubles = m_Buffer.size();
-//  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
-//
-//  // calculate required padding for last chunk
-//  int padding = ((doubles + WARPSIZE - 1) & -WARPSIZE) - doubles;
-//  doubles += padding;
-//
-//  // determine chunk assignments per warp
-//  int per = (doubles + blocks * warpsperblock - 1) / (blocks * warpsperblock);
-//  if (per < WARPSIZE) per = WARPSIZE;
-//  per = (per + WARPSIZE - 1) & -WARPSIZE;
-//  int curr = 0, before = 0, d = 0;
-//  for (int i = 0; i < blocks * warpsperblock; i++) {
-//    curr += per;
-//    cut[i] = min(curr, doubles);
-//    if (cut[i] - before > 0) {
-//      d = cut[i] - before;
-//    }
-//    before = cut[i];
-//  }
-//
-//  // set the pad values to ensure correct prediction
-//  if (d <= WARPSIZE) {
-//    for (int i = doubles - padding; i < doubles; i++) {
-//      cbuf[i] = 0;
-//    }
-//  } else {
-//    for (int i = doubles - padding; i < doubles; i++) {
-//      cbuf[i] = cbuf[(i & -WARPSIZE) - (dimensionality - i % dimensionality)];
-//    }
-//  }
-//
-//  // allocate GPU buffers
-//  ull *cbufl; // uncompressed data
-//  char *dbufl; // compressed data
-//  int *cutl; // chunk boundaries
-//  int *offl; // offset table
-//  if (cudaSuccess != cudaMalloc((void **)&cbufl, sizeof(ull) * doubles))
-//    fprintf(stderr, "could not allocate cbufd\n");
-//  CudaTest("couldn't allocate cbufd");
-//  if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
-//    fprintf(stderr, "could not allocate dbufd\n");
-//  CudaTest("couldn't allocate dbufd");
-//  if (cudaSuccess != cudaMalloc((void **)&cutl, sizeof(int) * blocks * warpsperblock))
-//    fprintf(stderr, "could not allocate cutd\n");
-//  CudaTest("couldn't allocate cutd");
-//  if (cudaSuccess != cudaMalloc((void **)&offl, sizeof(int) * blocks * warpsperblock))
-//    fprintf(stderr, "could not allocate offd\n");
-//  CudaTest("couldn't allocate offd");
-//
-//  // copy buffer starting addresses (pointers) and values to constant memory
-//  if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
-//    fprintf(stderr, "copying of dimensionality to device failed\n");
-//  CudaTest("dimensionality copy to device failed");
-//  if (cudaSuccess != cudaMemcpyToSymbol(cbufd, &cbufl, sizeof(void *)))
-//    fprintf(stderr, "copying of cbufl to device failed\n");
-//  CudaTest("cbufl copy to device failed");
-//  if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
-//    fprintf(stderr, "copying of dbufl to device failed\n");
-//  CudaTest("dbufl copy to device failed");
-//  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
-//    fprintf(stderr, "copying of cutl to device failed\n");
-//  CudaTest("cutl copy to device failed");
-//  if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
-//    fprintf(stderr, "copying of offl to device failed\n");
-//  CudaTest("offl copy to device failed");
-//
-//  // copy CPU buffer contents to GPU
-//  if (cudaSuccess != cudaMemcpy(cbufl, cbuf, sizeof(ull) * doubles, cudaMemcpyHostToDevice))
-//    fprintf(stderr, "copying of cbuf to device failed\n");
-//  CudaTest("cbuf copy to device failed");
-//  if (cudaSuccess != cudaMemcpy(cutl, cut, sizeof(int) * blocks * warpsperblock, cudaMemcpyHostToDevice))
-//    fprintf(stderr, "copying of cut to device failed\n");
-//  CudaTest("cut copy to device failed");
-//
-//  CompressionKernel<<<blocks, WARPSIZE*warpsperblock>>>();
-//  CudaTest("compression kernel launch failed");
-//
-//  // transfer offsets back to CPU
-//  if(cudaSuccess != cudaMemcpy(off, offl, sizeof(int) * blocks * warpsperblock, cudaMemcpyDeviceToHost))
-//    fprintf(stderr, "copying of off from device failed\n");
-//  CudaTest("off copy from device failed");
-//
-//  // output header
-//  int num;
-//  int doublecnt = doubles-padding;
-//  num = fwrite(&blocks, 1, 1, stdout);
-//  assert(1 == num);
-//  num = fwrite(&warpsperblock, 1, 1, stdout);
-//  assert(1 == num);
-//  num = fwrite(&dimensionality, 1, 1, stdout);
-//  assert(1 == num);
-//  num = fwrite(&doublecnt, 4, 1, stdout);
-//  assert(1 == num);
-//  // output offset table
-//  for(int i = 0; i < blocks * warpsperblock; i++) {
-//    int start = 0;
-//    if(i > 0) start = cut[i-1];
-//    off[i] -= ((start+1)/2*17);
-//    num = fwrite(&off[i], 4, 1, stdout); // chunk's compressed size in bytes
-//    assert(1 == num);
-//  }
-//  // output compressed data by chunk
-//  for(int i = 0; i < blocks * warpsperblock; i++) {
-//    int offset, start = 0;
-//    if(i > 0) start = cut[i-1];
-//    offset = ((start+1)/2*17);
-//    // transfer compressed data back to CPU by chunk
-//    if (cudaSuccess != cudaMemcpy(dbuf + offset, dbufl + offset, sizeof(char) * off[i], cudaMemcpyDeviceToHost))
-//      fprintf(stderr, "copying of dbuf from device failed\n");
-//    CudaTest("dbuf copy from device failed");
-//    num = fwrite(&dbuf[offset], 1, off[i], stdout);
-//    assert(off[i] == num);
-//  }
-//
-//  free(cbuf);
-//  free(dbuf);
-//  free(cut);
-//  free(off);
-//
-//  if (cudaSuccess != cudaFree(cbufl))
-//    fprintf(stderr, "could not deallocate cbufd\n");
-//  CudaTest("couldn't deallocate cbufd");
-//  if (cudaSuccess != cudaFree(dbufl))
-//    fprintf(stderr, "could not deallocate dbufd\n");
-//  CudaTest("couldn't deallocate dbufd");
-//  if (cudaSuccess != cudaFree(cutl))
-//    fprintf(stderr, "could not deallocate cutd\n");
-//  CudaTest("couldn't deallocate cutd");
-//  if (cudaSuccess != cudaFree(offl))
-//    fprintf(stderr, "could not deallocate offd\n");
-//  CudaTest("couldn't deallocate offd");
-//
+  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
+
+  // calculate required padding for last chunk
+  int padding = ((doubles + WARPSIZE - 1) & -WARPSIZE) - doubles;
+  doubles += padding;
+
+  // determine chunk assignments per warp
+  int per = (doubles + blocks * warpsperblock - 1) / (blocks * warpsperblock);
+  if (per < WARPSIZE) per = WARPSIZE;
+  per = (per + WARPSIZE - 1) & -WARPSIZE;
+  int curr = 0, before = 0, d = 0;
+  for (int i = 0; i < blocks * warpsperblock; i++) {
+    curr += per;
+    cut[i] = min(curr, doubles);
+    if (cut[i] - before > 0) {
+      d = cut[i] - before;
+    }
+    before = cut[i];
+  }
+
+  // set the pad values to ensure correct prediction
+  if (d <= WARPSIZE) {
+    for (int i = doubles - padding; i < doubles; i++) {
+      cbuf[i] = 0;
+    }
+  } else {
+    for (int i = doubles - padding; i < doubles; i++) {
+      cbuf[i] = cbuf[(i & -WARPSIZE) - (dimensionality - i % dimensionality)];
+    }
+  }
+
+  // allocate GPU buffers
+  ull *cbufl; // uncompressed data
+  char *dbufl; // compressed data
+  int *cutl; // chunk boundaries
+  int *offl; // offset table
+  if (cudaSuccess != cudaMalloc((void **)&cbufl, sizeof(ull) * doubles))
+    fprintf(stderr, "could not allocate cbufd\n");
+  CudaTest("couldn't allocate cbufd");
+  if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
+    fprintf(stderr, "could not allocate dbufd\n");
+  CudaTest("couldn't allocate dbufd");
+  if (cudaSuccess != cudaMalloc((void **)&cutl, sizeof(int) * blocks * warpsperblock))
+    fprintf(stderr, "could not allocate cutd\n");
+  CudaTest("couldn't allocate cutd");
+  if (cudaSuccess != cudaMalloc((void **)&offl, sizeof(int) * blocks * warpsperblock))
+    fprintf(stderr, "could not allocate offd\n");
+  CudaTest("couldn't allocate offd");
+
+  // copy buffer starting addresses (pointers) and values to constant memory
+  if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
+    fprintf(stderr, "copying of dimensionality to device failed\n");
+  CudaTest("dimensionality copy to device failed");
+  if (cudaSuccess != cudaMemcpyToSymbol(cbufd, &cbufl, sizeof(void *)))
+    fprintf(stderr, "copying of cbufl to device failed\n");
+  CudaTest("cbufl copy to device failed");
+  if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
+    fprintf(stderr, "copying of dbufl to device failed\n");
+  CudaTest("dbufl copy to device failed");
+  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
+    fprintf(stderr, "copying of cutl to device failed\n");
+  CudaTest("cutl copy to device failed");
+  if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
+    fprintf(stderr, "copying of offl to device failed\n");
+  CudaTest("offl copy to device failed");
+
+  // copy CPU buffer contents to GPU
+  if (cudaSuccess != cudaMemcpy(cbufl, cbuf, sizeof(ull) * doubles, cudaMemcpyHostToDevice))
+    fprintf(stderr, "copying of cbuf to device failed\n");
+  CudaTest("cbuf copy to device failed");
+  if (cudaSuccess != cudaMemcpy(cutl, cut, sizeof(int) * blocks * warpsperblock, cudaMemcpyHostToDevice))
+    fprintf(stderr, "copying of cut to device failed\n");
+  CudaTest("cut copy to device failed");
+
+  CompressionKernel<<<blocks, WARPSIZE*warpsperblock>>>();
+  CudaTest("compression kernel launch failed");
+
+  // transfer offsets back to CPU
+  if(cudaSuccess != cudaMemcpy(off, offl, sizeof(int) * blocks * warpsperblock, cudaMemcpyDeviceToHost))
+    fprintf(stderr, "copying of off from device failed\n");
+  CudaTest("off copy from device failed");
+
+  // output header
+  int num;
+  int doublecnt = doubles-padding;
+  num = fwrite(&blocks, 1, 1, stdout);
+  assert(1 == num);
+  num = fwrite(&warpsperblock, 1, 1, stdout);
+  assert(1 == num);
+  num = fwrite(&dimensionality, 1, 1, stdout);
+  assert(1 == num);
+  num = fwrite(&doublecnt, 4, 1, stdout);
+  assert(1 == num);
+  // output offset table
+  for(int i = 0; i < blocks * warpsperblock; i++) {
+    int start = 0;
+    if(i > 0) start = cut[i-1];
+    off[i] -= ((start+1)/2*17);
+    num = fwrite(&off[i], 4, 1, stdout); // chunk's compressed size in bytes
+    assert(1 == num);
+  }
+  // output compressed data by chunk
+  for(int i = 0; i < blocks * warpsperblock; i++) {
+    int offset, start = 0;
+    if(i > 0) start = cut[i-1];
+    offset = ((start+1)/2*17);
+    // transfer compressed data back to CPU by chunk
+    if (cudaSuccess != cudaMemcpy(dbuf + offset, dbufl + offset, sizeof(char) * off[i], cudaMemcpyDeviceToHost))
+      fprintf(stderr, "copying of dbuf from device failed\n");
+    CudaTest("dbuf copy from device failed");
+    num = fwrite(&dbuf[offset], 1, off[i], stdout);
+    assert(off[i] == num);
+  }
+
+  free(cbuf);
+  free(dbuf);
+  free(cut);
+  free(off);
+
+  if (cudaSuccess != cudaFree(cbufl))
+    fprintf(stderr, "could not deallocate cbufd\n");
+  CudaTest("couldn't deallocate cbufd");
+  if (cudaSuccess != cudaFree(dbufl))
+    fprintf(stderr, "could not deallocate dbufd\n");
+  CudaTest("couldn't deallocate dbufd");
+  if (cudaSuccess != cudaFree(cutl))
+    fprintf(stderr, "could not deallocate cutd\n");
+  CudaTest("couldn't deallocate cutd");
+  if (cudaSuccess != cudaFree(offl))
+    fprintf(stderr, "could not deallocate offd\n");
+  CudaTest("couldn't deallocate offd");
+
 }
 
 template <typename data_t>
