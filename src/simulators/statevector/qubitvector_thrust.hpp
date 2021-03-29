@@ -477,6 +477,7 @@ public:
   }
 
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0);
+  void Compress(uint_t pos);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -540,6 +541,12 @@ void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* p
                     thrust::raw_pointer_cast(pSrcHost->Buffer().data()+srcPos),
                     size*sizeof(data_t),cudaMemcpyHostToDevice,stream);
   }
+}
+
+template <typename data_t>
+void QubitVectorHostBuffer<data_t>::Compress(uint_t pos)
+{
+
 }
 
 template <typename data_t>
