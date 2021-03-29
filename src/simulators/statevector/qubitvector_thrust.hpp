@@ -104,10 +104,12 @@ __global__ void CompressionKernel()
   ull diff, prev;
   __shared__ int ibufs[32 * (3 * WARPSIZE / 2)]; // shared space for prefix sum
 
+  printf("succeed ibufs intilization");
   // index within this warp
   lane = threadIdx.x & 31;
   // index within shared prefix sum array
   iindex = threadIdx.x / WARPSIZE * (3 * WARPSIZE / 2) + lane;
+  printf("index within shared prefix %d\n", iindex);
   ibufs[iindex] = 0;
   iindex += WARPSIZE / 2;
   lastidx = (threadIdx.x / WARPSIZE + 1) * (3 * WARPSIZE / 2) - 1;
