@@ -554,7 +554,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   int padding = ((doubles + WARPSIZE - 1) & -WARPSIZE) - doubles;
   doubles += padding;
 
-  std::cout << "Num doubles after cal padding" << doubles << std::endl;
+  std::cout << "Num doubles after cal padding " << doubles << std::endl;
 
   // allocate GPU buffers
   ull *cbufl; // uncompressed data
@@ -573,6 +573,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if (cudaSuccess != cudaMalloc((void **)&offl, sizeof(int) * blocks * warpsperblock))
     fprintf(stderr, "could not allocate offd\n");
   CudaTest("couldn't allocate offd");
+
+  std::cout << "Finishe allocating mem" << std::endl;
 
   cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data()));
 
