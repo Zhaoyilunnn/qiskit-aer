@@ -625,12 +625,12 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   CudaTest("offl copy to device failed");
 
   // copy CPU buffer contents to GPU
-  if (cudaSuccess != cudaMemcpy(cbufl, cbuf, sizeof(ull) * doubles, cudaMemcpyHostToDevice))
-    fprintf(stderr, "copying of cbuf to device failed\n");
-  CudaTest("cbuf copy to device failed");
-  if (cudaSuccess != cudaMemcpy(cutl, cut, sizeof(int) * blocks * warpsperblock, cudaMemcpyHostToDevice))
-    fprintf(stderr, "copying of cut to device failed\n");
-  CudaTest("cut copy to device failed");
+//  if (cudaSuccess != cudaMemcpy(cbufl, cbuf, sizeof(ull) * doubles, cudaMemcpyHostToDevice))
+//    fprintf(stderr, "copying of cbuf to device failed\n");
+//  CudaTest("cbuf copy to device failed");
+//  if (cudaSuccess != cudaMemcpy(cutl, cut, sizeof(int) * blocks * warpsperblock, cudaMemcpyHostToDevice))
+//    fprintf(stderr, "copying of cut to device failed\n");
+//  CudaTest("cut copy to device failed");
 
   CompressionKernel<<<blocks, WARPSIZE*warpsperblock>>>();
   CudaTest("compression kernel launch failed");
