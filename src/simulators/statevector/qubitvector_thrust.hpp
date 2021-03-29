@@ -547,6 +547,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 //  // read in trace to cbuf
 //  int doubles = fread(cbuf, 8, MAX, stdin);
   int doubles = 2 * m_Buffer.size();  // The size of data to be compressed
+  std::cout << "Num doubles to be compress: " << std::endl;
 //  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
 
   // calculate required padding for last chunk
@@ -630,6 +631,12 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if(cudaSuccess != cudaMemcpy(off, offl, sizeof(int) * blocks * warpsperblock, cudaMemcpyDeviceToHost))
     fprintf(stderr, "copying of off from device failed\n");
   CudaTest("off copy from device failed");
+
+  int sum_byte_compressed = 0;
+  for (int ic = 0; i < blocks*warpsperblock; i++) {
+    sum_byte_compressed += off[i];
+  }
+  std::cout << "Num bytes after compression" << std::endl;
 
   // output header
 //  int num;
