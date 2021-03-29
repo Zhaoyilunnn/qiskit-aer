@@ -83,6 +83,201 @@ double mysecond()
 #define AER_MAX_GPU_BUFFERS   64
 #define AER_NUM_STREAM        2
 
+
+#define ull unsigned long long
+#define MAX (64*1024*1024)
+
+#define WARPSIZE 32
+
+__constant__ int dimensionalityd; // dimensionality parameter
+__constant__ ull *cbufd; // ptr to uncompressed data
+__constant__ unsigned char *dbufd; // ptr to compressed data
+__constant__ ull *fbufd; // ptr to decompressed data
+__constant__ int *cutd; // ptr to chunk boundaries
+__constant__ int *offd; // ptr to chunk offsets after compression
+
+
+
+__global__ void CompressionKernel()
+{
+  int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
+  ull diff, prev;
+  __shared__ int ibufs[32 * (3 * WARPSIZE / 2)]; // shared space for prefix sum
+
+  // index within this warp
+  lane = threadIdx.x & 31;
+  // index within shared prefix sum array
+  iindex = threadIdx.x / WARPSIZE * (3 * WARPSIZE / 2) + lane;
+  ibufs[iindex] = 0;
+  iindex += WARPSIZE / 2;
+  lastidx = (threadIdx.x / WARPSIZE + 1) * (3 * WARPSIZE / 2) - 1;
+  // warp id
+  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
+  // prediction index within previous subchunk
+  offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
+
+  // determine start and end of chunk to compress
+  start = 0;
+  if (warp > 0) start = cutd[warp-1];
+  term = cutd[warp];
+  off = ((start+1)/2*17);
+
+  prev = 0;
+  for (int i = start + lane; i < term; i += WARPSIZE) {
+    // calculate delta between value to compress and prediction
+    // and negate if negative
+    diff = cbufd[i] - prev;
+    code = (diff >> 60) & 8;
+    if (code != 0) {
+      diff = -diff;
+    }
+
+    // count leading zeros in positive delta
+    bcount = 8 - (__clzll(diff) >> 3);
+    if (bcount == 2) bcount = 3; // encode 6 lead-zero bytes as 5
+
+    // prefix sum to determine start positions of non-zero delta bytes
+    ibufs[iindex] = bcount;
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-1];
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-2];
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-4];
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-8];
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-16];
+    __threadfence_block();
+
+    // write out non-zero bytes of delta to compressed buffer
+    beg = off + (WARPSIZE/2) + ibufs[iindex-1];
+    end = beg + bcount;
+    for (; beg < end; beg++) {
+      dbufd[beg] = diff;
+      diff >>= 8;
+    }
+
+    if (bcount >= 3) bcount--; // adjust byte count for the dropped encoding
+    tmp = ibufs[lastidx];
+    code |= bcount;
+    ibufs[iindex] = code;
+    __threadfence_block();
+
+    // write out half-bytes of sign and leading-zero-byte count (every other thread
+    // writes its half-byte and neighbor's half-byte)
+    if ((lane & 1) != 0) {
+      dbufd[off + (lane >> 1)] = ibufs[iindex-1] | (code << 4);
+    }
+    off += tmp + (WARPSIZE/2);
+
+    // save prediction value from this subchunk (based on provided dimensionality)
+    // for use in next subchunk
+    prev = cbufd[i + offset];
+  }
+
+  // save final value of off, which is total bytes of compressed output for this chunk
+  if (lane == 31) offd[warp] = off;
+}
+
+/************************************************************************************/
+
+/*
+This is the GPU decompression kernel, which should be launched using the block count
+and warps/block:
+  CompressionKernel<<<blocks, WARPSIZE*warpsperblock>>>();
+
+Inputs
+------
+dimensionalityd: dimensionality of trace
+dbufd: ptr to array of compressed data
+cutd: ptr to array of chunk boundaries
+
+Output
+------
+The decompressed data in fbufd
+*/
+
+__global__ void DecompressionKernel()
+{
+  int offset, code, bcount, off, beg, end, lane, warp, iindex, lastidx, start, term;
+  ull diff, prev;
+  __shared__ int ibufs[32 * (3 * WARPSIZE / 2)];
+
+  // index within this warp
+  lane = threadIdx.x & 31;
+  // index within shared prefix sum array
+  iindex = threadIdx.x / WARPSIZE * (3 * WARPSIZE / 2) + lane;
+  ibufs[iindex] = 0;
+  iindex += WARPSIZE / 2;
+  lastidx = (threadIdx.x / WARPSIZE + 1) * (3 * WARPSIZE / 2) - 1;
+  // warp id
+  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
+  // prediction index within previous subchunk
+  offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
+
+  // determine start and end of chunk to decompress
+  start = 0;
+  if (warp > 0) start = cutd[warp-1];
+  term = cutd[warp];
+  off = ((start+1)/2*17);
+
+  prev = 0;
+  for (int i = start + lane; i < term; i += WARPSIZE) {
+    // read in half-bytes of size and leading-zero count information
+    if ((lane & 1) == 0) {
+      code = dbufd[off + (lane >> 1)];
+      ibufs[iindex] = code;
+      ibufs[iindex + 1] = code >> 4;
+    }
+    off += (WARPSIZE/2);
+    __threadfence_block();
+    code = ibufs[iindex];
+
+    bcount = code & 7;
+    if (bcount >= 2) bcount++;
+
+    // calculate start positions of compressed data
+    ibufs[iindex] = bcount;
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-1];
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-2];
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-4];
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-8];
+    __threadfence_block();
+    ibufs[iindex] += ibufs[iindex-16];
+    __threadfence_block();
+
+    // read in compressed data (the non-zero bytes)
+    beg = off + ibufs[iindex-1];
+    off += ibufs[lastidx];
+    end = beg + bcount - 1;
+    diff = 0;
+    for (; beg <= end; end--) {
+      diff <<= 8;
+      diff |= dbufd[end];
+    }
+
+    // negate delta if sign bit indicates it was negated during compression
+    if ((code & 8) != 0) {
+      diff = -diff;
+    }
+
+    // write out the uncompressed word
+    fbufd[i] = prev + diff;
+    __threadfence_block();
+
+    // save prediction for next subchunk
+    prev = fbufd[i + offset];
+  }
+}
+
+/************************************************************************************/
+
+
 namespace AER {
 namespace QV {
 
@@ -173,6 +368,7 @@ public:
   virtual void Copy(const std::vector<data_t>& v) = 0;
 
   virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0) = 0;
+  virtual void Compress(uint_t pos);
 
   virtual void CopyIn(uint_t pos,const data_t* pSrc,uint_t size) = 0;
   virtual void CopyOut(uint_t pos,data_t* pDest,uint_t size) = 0;
@@ -227,6 +423,9 @@ public:
   }
 
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t stream=0);
+
+  // Data compression
+  void Compress(uint_t pos);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -302,6 +501,12 @@ void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>*
                     thrust::raw_pointer_cast(pSrcHost->Buffer().data()+srcPos),
                     size*sizeof(data_t),cudaMemcpyHostToDevice,stream);
   }
+}
+
+template <typename data_t>
+void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos)
+{
+
 }
 
 template <typename data_t>
@@ -2467,6 +2672,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             if (num_exe > 0) { // In this case, some chunks on GPU are not updated
               //execute kernel
               bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
+              //TODO: Decompression is not first copy (a for loop)
               if (func.Reduction())
                 ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
                                                    (iStream * nGPUBufferPerStream) << chunkBits,
@@ -2475,6 +2681,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                 m_Chunks[iPlace].Execute(offsets, func, exe_size, (iStream * nGPUBufferPerStream) << chunkBits,
                                          localMask,
                                          enable_omp, m_Streams[iStream]);
+              //TODO: compression (a for loop)
               num_exe -= nChunksOnGPU;
               std::cout << "Num Exe: " << num_exe << std::endl;
               //copy back
