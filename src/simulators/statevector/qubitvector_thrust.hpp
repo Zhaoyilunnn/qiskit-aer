@@ -587,7 +587,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     }
     before = cutl[i];
   }
-
+  std::cout << "finish chunk assignments" << std::endl;
   // set the pad values to ensure correct prediction
   if (d <= WARPSIZE) {
     for (int i = doubles - padding; i < doubles; i++) {
