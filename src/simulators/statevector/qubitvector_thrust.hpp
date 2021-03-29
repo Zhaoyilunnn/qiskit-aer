@@ -122,6 +122,7 @@ __global__ void CompressionKernel()
   // determine start and end of chunk to compress
   start = 0;
   if (warp > 0) start = cutd[warp-1];
+  printf("determine start succeed");
   term = cutd[warp];
   off = ((start+1)/2*17);
 
