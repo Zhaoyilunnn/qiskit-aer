@@ -559,7 +559,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   // allocate GPU buffers
   ull *cbufl; // uncompressed data
   char *dbufl; // compressed data
-  int *cutl; // chunk boundaries
+//  int *cutl; // chunk boundaries
+  thrust::device_vector<int> cutl(blocks * warpsperblock, 0);
   int *offl; // offset table
   if (cudaSuccess != cudaMalloc((void **)&cbufl, sizeof(ull) * doubles))
     fprintf(stderr, "could not allocate cbufd\n");
@@ -567,8 +568,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
     fprintf(stderr, "could not allocate dbufd\n");
   CudaTest("couldn't allocate dbufd");
-  if (cudaSuccess != cudaMalloc((void **)&cutl, sizeof(int) * blocks * warpsperblock))
-    fprintf(stderr, "could not allocate cutd\n");
+//  if (cudaSuccess != cudaMalloc((void **)&cutl, sizeof(int) * blocks * warpsperblock))
+//    fprintf(stderr, "could not allocate cutd\n");
   CudaTest("couldn't allocate cutd");
   if (cudaSuccess != cudaMalloc((void **)&offl, sizeof(int) * blocks * warpsperblock))
     fprintf(stderr, "could not allocate offd\n");
@@ -615,7 +616,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
     fprintf(stderr, "copying of dbufl to device failed\n");
   CudaTest("dbufl copy to device failed");
-  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
+//  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
+  if (cudaSuccess != cudaMemcpyToSymbol(cutd, thrust::raw_pointer_cast(cutl.data()), sizeof(void *)))
     fprintf(stderr, "copying of cutl to device failed\n");
   CudaTest("cutl copy to device failed");
   if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
