@@ -632,36 +632,36 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   CudaTest("off copy from device failed");
 
   // output header
-  int num;
-  int doublecnt = doubles-padding;
-  num = fwrite(&blocks, 1, 1, stdout);
-  assert(1 == num);
-  num = fwrite(&warpsperblock, 1, 1, stdout);
-  assert(1 == num);
-  num = fwrite(&dimensionality, 1, 1, stdout);
-  assert(1 == num);
-  num = fwrite(&doublecnt, 4, 1, stdout);
-  assert(1 == num);
-  // output offset table
-  for(int i = 0; i < blocks * warpsperblock; i++) {
-    int start = 0;
-    if(i > 0) start = cut[i-1];
-    off[i] -= ((start+1)/2*17);
-    num = fwrite(&off[i], 4, 1, stdout); // chunk's compressed size in bytes
-    assert(1 == num);
-  }
-  // output compressed data by chunk
-  for(int i = 0; i < blocks * warpsperblock; i++) {
-    int offset, start = 0;
-    if(i > 0) start = cut[i-1];
-    offset = ((start+1)/2*17);
-    // transfer compressed data back to CPU by chunk
-    if (cudaSuccess != cudaMemcpy(dbuf + offset, dbufl + offset, sizeof(char) * off[i], cudaMemcpyDeviceToHost))
-      fprintf(stderr, "copying of dbuf from device failed\n");
-    CudaTest("dbuf copy from device failed");
-    num = fwrite(&dbuf[offset], 1, off[i], stdout);
-    assert(off[i] == num);
-  }
+//  int num;
+//  int doublecnt = doubles-padding;
+//  num = fwrite(&blocks, 1, 1, stdout);
+//  assert(1 == num);
+//  num = fwrite(&warpsperblock, 1, 1, stdout);
+//  assert(1 == num);
+//  num = fwrite(&dimensionality, 1, 1, stdout);
+//  assert(1 == num);
+//  num = fwrite(&doublecnt, 4, 1, stdout);
+//  assert(1 == num);
+//  // output offset table
+//  for(int i = 0; i < blocks * warpsperblock; i++) {
+//    int start = 0;
+//    if(i > 0) start = cut[i-1];
+//    off[i] -= ((start+1)/2*17);
+//    num = fwrite(&off[i], 4, 1, stdout); // chunk's compressed size in bytes
+//    assert(1 == num);
+//  }
+//  // output compressed data by chunk
+//  for(int i = 0; i < blocks * warpsperblock; i++) {
+//    int offset, start = 0;
+//    if(i > 0) start = cut[i-1];
+//    offset = ((start+1)/2*17);
+//    // transfer compressed data back to CPU by chunk
+//    if (cudaSuccess != cudaMemcpy(dbuf + offset, dbufl + offset, sizeof(char) * off[i], cudaMemcpyDeviceToHost))
+//      fprintf(stderr, "copying of dbuf from device failed\n");
+//    CudaTest("dbuf copy from device failed");
+//    num = fwrite(&dbuf[offset], 1, off[i], stdout);
+//    assert(off[i] == num);
+//  }
 
   free(cbuf);
   free(dbuf);
