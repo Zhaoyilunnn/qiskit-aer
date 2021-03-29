@@ -595,7 +595,7 @@ void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "could not allocate offd\n");
   CudaTest("couldn't allocate offd");
 
-  cbufl = thrust::raw_pointer_cast(m_Buffer.data());
+  cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data()));
 
   // copy buffer starting addresses (pointers) and values to constant memory
   if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
