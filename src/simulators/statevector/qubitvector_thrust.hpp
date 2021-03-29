@@ -586,6 +586,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   int curr = 0, before = 0, d = 0;
   for (int i = 0; i < blocks * warpsperblock; i++) {
     curr += per;
+    std::cout << "Finish deciding bound " << i << std::endl;
     cutl[i] = min(curr, doubles);
     if (cutl[i] - before > 0) {
       d = cutl[i] - before;
