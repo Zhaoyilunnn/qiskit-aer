@@ -521,6 +521,7 @@ void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>*
 template <typename data_t>
 uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
+  uint_t out_size = size;
 //  cudaMemcpyToSymbol(cbufd, thrust::raw_pointer_cast(m_Buffer.data()), sizeof(void *));
   int blocks = 28, warpsperblock = 18, dimensionality = 2;
   cudaGetLastError();  // reset error value
@@ -680,6 +681,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "could not deallocate offd\n");
   CudaTest("couldn't deallocate offd");
 
+  return out_size;
 }
 
 template <typename data_t>
@@ -718,7 +720,7 @@ void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* p
 template <typename data_t>
 uint_t QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
-
+  return 0;
 }
 
 template <typename data_t>
