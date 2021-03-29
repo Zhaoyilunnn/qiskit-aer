@@ -122,6 +122,8 @@ __global__ void CompressionKernel()
   term = cutd[warp];
   off = ((start+1)/2*17);
 
+  printf("succeed param initialize");
+
   prev = 0;
   for (int i = start + lane; i < term; i += WARPSIZE) {
     // calculate delta between value to compress and prediction
