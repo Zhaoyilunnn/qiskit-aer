@@ -89,12 +89,12 @@ double mysecond()
 
 #define WARPSIZE 32
 
-__constant__ int dimensionalityd; // dimensionality parameter
-__constant__ ull *cbufd; // ptr to uncompressed data
-__constant__ unsigned char *dbufd; // ptr to compressed data
-__constant__ ull *fbufd; // ptr to decompressed data
-__constant__ int *cutd; // ptr to chunk boundaries
-__constant__ int *offd; // ptr to chunk offsets after compression
+__device__ __constant__ int dimensionalityd; // dimensionality parameter
+__device__ __constant__ ull *cbufd; // ptr to uncompressed data
+__device__ __constant__ unsigned char *dbufd; // ptr to compressed data
+__device__ __constant__ ull *fbufd; // ptr to decompressed data
+__device__ __constant__ int *cutd; // ptr to chunk boundaries
+__device__ __constant__ int *offd; // ptr to chunk offsets after compression
 
 
 
