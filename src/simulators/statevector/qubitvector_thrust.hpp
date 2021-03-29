@@ -382,7 +382,7 @@ public:
   virtual void Copy(const std::vector<data_t>& v) = 0;
 
   virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0) = 0;
-  virtual void Compress(uint_t pos, uint_t size) = 0;
+  virtual uint_t Compress(uint_t pos, uint_t size) = 0;
 
   virtual void CopyIn(uint_t pos,const data_t* pSrc,uint_t size) = 0;
   virtual void CopyOut(uint_t pos,data_t* pDest,uint_t size) = 0;
@@ -439,7 +439,7 @@ public:
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t stream=0);
 
   // Data compression
-  void Compress(uint_t pos, uint_t size);
+  uint_t Compress(uint_t pos, uint_t size);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -491,7 +491,7 @@ public:
   }
 
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0);
-  void Compress(uint_t pos, uint_t size);
+  uint_t Compress(uint_t pos, uint_t size);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -519,7 +519,7 @@ void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>*
 }
 
 template <typename data_t>
-void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
+uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
 //  cudaMemcpyToSymbol(cbufd, thrust::raw_pointer_cast(m_Buffer.data()), sizeof(void *));
   int blocks = 28, warpsperblock = 18, dimensionality = 2;
@@ -716,7 +716,7 @@ void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* p
 }
 
 template <typename data_t>
-void QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size)
+uint_t QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
 
 }
@@ -992,6 +992,9 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   destPos = dest << chunkBits;
   srcPos = m_size + (bufSrc << chunkBits);
   size = (1ull << chunkBits) * nChunks;
+
+  // Compression before copying back to CPU
+  size = chunks.m_pChunks->Compress(destPos, size);
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
