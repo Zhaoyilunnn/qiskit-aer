@@ -507,7 +507,8 @@ void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>*
 template <typename data_t>
 void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
-  cbufd = thrust::raw_pointer_cast(m_Buffer.data());
+  cudaMemcpyToSymbol(cbufd, thrust::raw_pointer_cast(m_Buffer.data()), sizeof(void *));
+//  cbufd = thrust::raw_pointer_cast(m_Buffer.data());
 }
 
 template <typename data_t>
