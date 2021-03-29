@@ -368,7 +368,7 @@ public:
   virtual void Copy(const std::vector<data_t>& v) = 0;
 
   virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0) = 0;
-  virtual void Compress(uint_t pos) = 0;
+  virtual void Compress(uint_t pos, uint_t size) = 0;
 
   virtual void CopyIn(uint_t pos,const data_t* pSrc,uint_t size) = 0;
   virtual void CopyOut(uint_t pos,data_t* pDest,uint_t size) = 0;
@@ -425,7 +425,7 @@ public:
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t stream=0);
 
   // Data compression
-  void Compress(uint_t pos);
+  void Compress(uint_t pos, uint_t size);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -477,7 +477,7 @@ public:
   }
 
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0);
-  void Compress(uint_t pos);
+  void Compress(uint_t pos, uint_t size);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -505,9 +505,9 @@ void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>*
 }
 
 template <typename data_t>
-void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos)
+void QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
-
+  cbufd = thrust::raw_pointer_cast(m_Buffer.data());
 }
 
 template <typename data_t>
@@ -544,7 +544,7 @@ void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* p
 }
 
 template <typename data_t>
-void QubitVectorHostBuffer<data_t>::Compress(uint_t pos)
+void QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
 
 }
