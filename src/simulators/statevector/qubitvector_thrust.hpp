@@ -623,7 +623,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "copying of dbufl to device failed\n");
   CudaTest("dbufl copy to device failed");
 //  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
-  if (cudaSuccess != cudaMemcpyToSymbol(cutd, thrust::raw_pointer_cast(cutl.data()), sizeof(void *)))
+  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &thrust::raw_pointer_cast(cutl.data()), sizeof(void *)))
     fprintf(stderr, "copying of cutl to device failed\n");
   CudaTest("cutl copy to device failed");
   if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
