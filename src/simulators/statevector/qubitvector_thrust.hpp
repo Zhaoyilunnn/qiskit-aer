@@ -554,6 +554,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   int padding = ((doubles + WARPSIZE - 1) & -WARPSIZE) - doubles;
   doubles += padding;
 
+  std::cout << "Num doubles after cal padding" << doubles << std::endl;
+
   // allocate GPU buffers
   ull *cbufl; // uncompressed data
   char *dbufl; // compressed data
