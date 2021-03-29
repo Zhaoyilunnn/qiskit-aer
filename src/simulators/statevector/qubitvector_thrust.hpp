@@ -1003,7 +1003,7 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
-  size = chunks.m_pChunks->Compress(destPos, size);
+  size = m_pChunks->Compress(destPos, size);
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
