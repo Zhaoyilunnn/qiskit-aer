@@ -689,8 +689,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if (cudaSuccess != cudaFree(dbufl))
     fprintf(stderr, "could not deallocate dbufd\n");
   CudaTest("couldn't deallocate dbufd");
-  if (cudaSuccess != cudaFree(cutl))
-    fprintf(stderr, "could not deallocate cutd\n");
+//  if (cudaSuccess != cudaFree(cutl))
+//    fprintf(stderr, "could not deallocate cutd\n");
   CudaTest("couldn't deallocate cutd");
   if (cudaSuccess != cudaFree(offl))
     fprintf(stderr, "could not deallocate offd\n");
