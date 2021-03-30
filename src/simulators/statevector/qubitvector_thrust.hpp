@@ -631,10 +631,14 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if(cudaSuccess != cudaMemcpy(off, offl, sizeof(int) * blocks * warpsperblock, cudaMemcpyDeviceToHost))
     fprintf(stderr, "copying of off from device failed\n");
   CudaTest("off copy from device failed");
-
+  
   int sum_byte_compressed = 0;
-  for (int ic = 0; ic < blocks*warpsperblock; ic++) {
-    sum_byte_compressed += off[ic];
+  // output offset table
+  for(int i = 0; i < blocks * warpsperblock; i++) {
+    int start = 0;
+    if(i > 0) start = cut[i-1];
+    off[i] -= ((start+1)/2*17);
+    sum_byte_compressed += off[i];    
   }
   std::cout << "Num bytes after compression" << sum_byte_compressed << std::endl;
 
