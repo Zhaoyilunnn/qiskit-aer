@@ -544,9 +544,9 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "cannot allocate off\n"); exit(-1);
   }
 
-//  // read in trace to cbuf
-//  int doubles = fread(cbuf, 8, MAX, stdin);
+  // Determine doubles size
   int doubles = 2 * m_Buffer.size();  // The size of data to be compressed
+//  int doubles = 2 * size;  // The size of data to be compressed
   std::cout << "Num doubles to be compress: " << doubles << std::endl;
 //  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
 
@@ -975,7 +975,7 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
-  size = m_pChunks->Compress(destPos, size);
+  size = m_pChunks->Compress(srcPos, size);
   std::cout << "Compression done" << std::endl;
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
