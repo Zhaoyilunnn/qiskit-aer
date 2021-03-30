@@ -2904,6 +2904,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   // After execution, update entanglement state
   update_entangled_state(qubits);
 
+  std::cout << "apply function done" << std::endl;
+
 #ifdef AER_DEBUG
   if(func.Reduction())
     DebugMsg("   ret = ",ret);
