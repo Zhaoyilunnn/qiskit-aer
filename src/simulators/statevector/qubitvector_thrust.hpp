@@ -39,6 +39,7 @@
 #include <thrust/host_vector.h>
 
 #include <thrust/system/omp/execution_policy.h>
+#include <thrust/copy.h>
 
 #include <algorithm>
 #include <array>
@@ -577,7 +578,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 
   std::cout << "Finished allocating mem" << std::endl;
 
-  cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data()));
+  thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer);
+  cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(buffer.data()));
 
   std::cout << "Finished converting number" << std::endl;
   // determine chunk assignments per warp
