@@ -535,10 +535,10 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if (dbuf == NULL) {
     fprintf(stderr, "cannot allocate dbuf\n"); exit(-1);
   }
-  int *cut = (int *)malloc(sizeof(int) * blocks * warpsperblock); // chunk boundaries
-  if (cut == NULL) {
-    fprintf(stderr, "cannot allocate cut\n"); exit(-1);
-  }
+//  int *cut = (int *)malloc(sizeof(int) * blocks * warpsperblock); // chunk boundaries
+//  if (cut == NULL) {
+//    fprintf(stderr, "cannot allocate cut\n"); exit(-1);
+//  }
   int *off = (int *)malloc(sizeof(int) * blocks * warpsperblock); // offset table
   if (off == NULL) {
     fprintf(stderr, "cannot allocate off\n"); exit(-1);
@@ -645,7 +645,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 
   free(cbuf);
   free(dbuf);
-  free(cut);
+//  free(cut);
   free(off);
 
   if (cudaSuccess != cudaFree(cbufl))
