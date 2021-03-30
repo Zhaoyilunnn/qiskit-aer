@@ -563,8 +563,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 //  int *cutl; // chunk boundaries
   thrust::device_vector<int> cutl(blocks * warpsperblock, 0);
   int *offl; // offset table
-  if (cudaSuccess != cudaMalloc((void **)&cbufl, sizeof(ull) * doubles))
-    fprintf(stderr, "could not allocate cbufd\n");
+//  if (cudaSuccess != cudaMalloc((void **)&cbufl, sizeof(ull) * doubles))
+//    fprintf(stderr, "could not allocate cbufd\n");
   CudaTest("couldn't allocate cbufd");
   if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
     fprintf(stderr, "could not allocate dbufd\n");
@@ -649,8 +649,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 //  free(cut);
   free(off);
 
-  if (cudaSuccess != cudaFree(cbufl))
-    fprintf(stderr, "could not deallocate cbufd\n");
+//  if (cudaSuccess != cudaFree(cbufl))
+//    fprintf(stderr, "could not deallocate cbufd\n");
   CudaTest("couldn't deallocate cbufd");
   if (cudaSuccess != cudaFree(dbufl))
     fprintf(stderr, "could not deallocate dbufd\n");
