@@ -104,12 +104,10 @@ __global__ void CompressionKernel()
   ull diff, prev;
   __shared__ int ibufs[32 * (3 * WARPSIZE / 2)]; // shared space for prefix sum
 
-  printf("succeed ibufs intilization");
   // index within this warp
   lane = threadIdx.x & 31;
   // index within shared prefix sum array
   iindex = threadIdx.x / WARPSIZE * (3 * WARPSIZE / 2) + lane;
-  printf("index within shared prefix %d\n", iindex);
   ibufs[iindex] = 0;
   iindex += WARPSIZE / 2;
   lastidx = (threadIdx.x / WARPSIZE + 1) * (3 * WARPSIZE / 2) - 1;
@@ -117,16 +115,12 @@ __global__ void CompressionKernel()
   warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
   // prediction index within previous subchunk
   offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
-  printf("succeed prediction index within previous subchunk");
 
   // determine start and end of chunk to compress
   start = 0;
   if (warp > 0) start = cutd[warp-1];
-  printf("determine start succeed");
   term = cutd[warp];
   off = ((start+1)/2*17);
-
-  printf("succeed param initialize");
 
   prev = 0;
   for (int i = start + lane; i < term; i += WARPSIZE) {
@@ -631,14 +625,6 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "copying of offl to device failed\n");
   CudaTest("offl copy to device failed");
 
-  // copy CPU buffer contents to GPU
-//  if (cudaSuccess != cudaMemcpy(cbufl, cbuf, sizeof(ull) * doubles, cudaMemcpyHostToDevice))
-//    fprintf(stderr, "copying of cbuf to device failed\n");
-//  CudaTest("cbuf copy to device failed");
-//  if (cudaSuccess != cudaMemcpy(cutl, cut, sizeof(int) * blocks * warpsperblock, cudaMemcpyHostToDevice))
-//    fprintf(stderr, "copying of cut to device failed\n");
-//  CudaTest("cut copy to device failed");
-
   CompressionKernel<<<blocks, WARPSIZE*warpsperblock>>>();
   CudaTest("compression kernel launch failed");
 
@@ -652,38 +638,6 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     sum_byte_compressed += off[ic];
   }
   std::cout << "Num bytes after compression" << std::endl;
-
-  // output header
-//  int num;
-//  int doublecnt = doubles-padding;
-//  num = fwrite(&blocks, 1, 1, stdout);
-//  assert(1 == num);
-//  num = fwrite(&warpsperblock, 1, 1, stdout);
-//  assert(1 == num);
-//  num = fwrite(&dimensionality, 1, 1, stdout);
-//  assert(1 == num);
-//  num = fwrite(&doublecnt, 4, 1, stdout);
-//  assert(1 == num);
-//  // output offset table
-//  for(int i = 0; i < blocks * warpsperblock; i++) {
-//    int start = 0;
-//    if(i > 0) start = cut[i-1];
-//    off[i] -= ((start+1)/2*17);
-//    num = fwrite(&off[i], 4, 1, stdout); // chunk's compressed size in bytes
-//    assert(1 == num);
-//  }
-//  // output compressed data by chunk
-//  for(int i = 0; i < blocks * warpsperblock; i++) {
-//    int offset, start = 0;
-//    if(i > 0) start = cut[i-1];
-//    offset = ((start+1)/2*17);
-//    // transfer compressed data back to CPU by chunk
-//    if (cudaSuccess != cudaMemcpy(dbuf + offset, dbufl + offset, sizeof(char) * off[i], cudaMemcpyDeviceToHost))
-//      fprintf(stderr, "copying of dbuf from device failed\n");
-//    CudaTest("dbuf copy from device failed");
-//    num = fwrite(&dbuf[offset], 1, off[i], stdout);
-//    assert(off[i] == num);
-//  }
 
   free(cbuf);
   free(dbuf);
