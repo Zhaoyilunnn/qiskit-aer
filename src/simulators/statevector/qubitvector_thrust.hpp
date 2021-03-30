@@ -975,8 +975,8 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
-//  size = m_pChunks->Compress(srcPos, size);
-//  std::cout << "Compression done" << std::endl;
+  size = m_pChunks->Compress(srcPos, size);
+  std::cout << "Compression done" << std::endl;
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
@@ -991,6 +991,8 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   else{
     chunks.m_pChunks->Copy(destPos,m_pChunks,srcPos,size,(DeviceID() >= 0),stream);
   }
+
+  std::cout << "Copying back done" << std::endl;
 
   return 0;
 }
