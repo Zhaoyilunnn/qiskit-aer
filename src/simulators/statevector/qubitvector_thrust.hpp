@@ -983,7 +983,8 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   std::cout << "size before compression " << size << std::endl;
   std::cout << "srcPos before compression " << srcPos << std::endl;
   std::cout << "destPos before compression " << destPos << std::endl;
-  size = m_pChunks->Compress(srcPos, size);
+  if (size >= 32) // temporally set this
+    size = m_pChunks->Compress(srcPos, size);
   std::cout << "size after compression " << size << std::endl;
   std::cout << "srcPos after compression " << srcPos << std::endl;
   std::cout << "destPos after compression " << destPos << std::endl;
