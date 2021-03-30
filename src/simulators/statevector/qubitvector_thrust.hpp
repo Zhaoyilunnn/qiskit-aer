@@ -581,7 +581,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   for (int cc = 0; cc < 10; cc++) {
     std::cout << m_Buffer[cc] << std::endl;
   }
-  thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer);
+  thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer.begin(), m_Buffer.begin() + size);
   cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(buffer.data()));
 
   std::cout << "Finished converting number" << std::endl;
