@@ -546,8 +546,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   }
 
   // Determine doubles size
-  int doubles = 2 * m_Buffer.size();  // The size of data to be compressed
-//  int doubles = 2 * size;  // The size of data to be compressed
+//  int doubles = 2 * m_Buffer.size();  // The size of data to be compressed
+  int doubles = 2 * size;  // The size of data to be compressed
   std::cout << "Num doubles to be compress: " << doubles << std::endl;
 //  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
 
