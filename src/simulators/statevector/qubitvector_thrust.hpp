@@ -2639,10 +2639,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   UpdateReferencedValue();
 
   // set chunkBits as the smallest unentangled bit
-  chunkBits = get_smallest_not_entangled();
-  if (chunkBits == 0) {
-    chunkBits++;
-  }
+//  chunkBits = get_smallest_not_entangled();
+//  if (chunkBits == 0) {
+//    chunkBits++;
+//  }
+
+  // In this version we fix chunkBits
+  chunkBits = m_maxChunkBits;
 
 //  //If no data exchange required execute along with all the state vectors
 //  if(m_nPlaces == 1 || func.IsDiagonal()){    //note: for multi-process m_nPlaces == 1 is not valid
@@ -2659,17 +2662,17 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     }
   }
 
-  size_t entangled = get_entangled_state();
-  if ((entangled >> chunkBits) >= AER_MAX_GPU_BUFFERS && chunkBits != m_maxChunkBits) {// In this case we don't use dynamic chunkBits
-    nLarge = 0;
-    chunkBits = m_maxChunkBits;
-    for(ib=numCBits;ib<N;ib++){
-      if(qubits[ib] >= chunkBits){
-        large_qubits.push_back(qubits[ib]);
-        nLarge++;
-      }
-    }
-  }
+//  size_t entangled = get_entangled_state();
+//  if ((entangled >> chunkBits) >= AER_MAX_GPU_BUFFERS && chunkBits != m_maxChunkBits) {// In this case we don't use dynamic chunkBits
+//    nLarge = 0;
+//    chunkBits = m_maxChunkBits;
+//    for(ib=numCBits;ib<N;ib++){
+//      if(qubits[ib] >= chunkBits){
+//        large_qubits.push_back(qubits[ib]);
+//        nLarge++;
+//      }
+//    }
+//  }
   nSmall = N - nLarge - numCBits;
 
 //  if(nLarge == 0){
