@@ -975,7 +975,9 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
+  std::cout << "size before compression" << size << std::endl;
   size = m_pChunks->Compress(srcPos, size);
+  std::cout << "size after compression" << size << std::endl;
   std::cout << "Compression done" << std::endl;
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
