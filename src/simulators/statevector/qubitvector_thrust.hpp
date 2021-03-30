@@ -560,7 +560,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   ull *cbufl; // uncompressed data
   char *dbufl; // compressed data
 //  int *cutl; // chunk boundaries
-  thrust::device_vector<int> cutl(blocks * warpsperblock, 0);
+  thrust::host_vector<int> cut(blocks * warpsperblock, 0);
+  thrust::device_vector<int> cutl = cut;
   int *offl; // offset table
   if (cudaSuccess != cudaMalloc((void **)&cbufl, sizeof(ull) * doubles))
     fprintf(stderr, "could not allocate cbufd\n");
@@ -636,11 +637,11 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   // output offset table
   for(int i = 0; i < blocks * warpsperblock; i++) {
     int start = 0;
-    if(i > 0) start = cut[i-1];
+    if(i > 0) start = cutl[i-1];
     off[i] -= ((start+1)/2*17);
     sum_byte_compressed += off[i];    
   }
-  std::cout << "Num bytes after compression" << sum_byte_compressed << std::endl;
+  std::cout << "Num bytes after compression " << sum_byte_compressed << std::endl;
 
   free(cbuf);
   free(dbuf);
