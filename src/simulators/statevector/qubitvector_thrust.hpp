@@ -2663,7 +2663,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
     }
   }
 
-//  size_t entangled = get_entangled_state();
+  size_t entangled = get_entangled_state();
 //  if ((entangled >> chunkBits) >= AER_MAX_GPU_BUFFERS && chunkBits != m_maxChunkBits) {// In this case we don't use dynamic chunkBits
 //    nLarge = 0;
 //    chunkBits = m_maxChunkBits;
