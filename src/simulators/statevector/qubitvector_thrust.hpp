@@ -578,8 +578,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 
   std::cout << "Finished allocating mem" << std::endl;
 
-  for (auto dd : m_Buffer) {
-    std::cout << dd << std::endl;
+  for (int cc = 0; cc < 10; cc++) {
+    std::cout << m_Buffer[cc] << std::endl;
   }
   thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer);
   cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(buffer.data()));
@@ -2448,6 +2448,7 @@ void QubitVectorThrust<data_t>::initialize()
 
   if(m_globalIndex == 0){
 //    m_Chunks[0].SetState(0,0,t,m_maxChunkBits);
+    // currently, GPU is 0, CPU is 1, all amplitudes are on CPU
     m_Chunks[1].SetState(0,0,t,m_maxChunkBits);
   }
 }
