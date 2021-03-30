@@ -587,7 +587,6 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   int curr = 0, before = 0, d = 0;
   for (int i = 0; i < blocks * warpsperblock; i++) {
     curr += per;
-    std::cout << "Finish deciding bound " << i << std::endl;
     cutl[i] = min(curr, doubles);
     if (cutl[i] - before > 0) {
       d = cutl[i] - before;
@@ -637,7 +636,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   for (int ic = 0; ic < blocks*warpsperblock; ic++) {
     sum_byte_compressed += off[ic];
   }
-  std::cout << "Num bytes after compression" << std::endl;
+  std::cout << "Num bytes after compression" << sum_byte_compressed << std::endl;
 
   free(cbuf);
   free(dbuf);
@@ -973,6 +972,7 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
 
   // Compression before copying back to CPU
   size = m_pChunks->Compress(destPos, size);
+  std::cout "Compression done" << std::endl;
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
