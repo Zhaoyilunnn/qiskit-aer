@@ -660,7 +660,6 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "could not deallocate offd\n");
   CudaTest("couldn't deallocate offd");
 
-  std::cout << "compression succeed" << std::endl;
   return out_size;
 }
 
@@ -976,8 +975,8 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
-  size = m_pChunks->Compress(srcPos, size);
-  std::cout << "Compression done" << std::endl;
+//  size = m_pChunks->Compress(srcPos, size);
+//  std::cout << "Compression done" << std::endl;
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
