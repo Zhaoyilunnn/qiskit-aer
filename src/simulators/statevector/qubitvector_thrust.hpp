@@ -578,6 +578,9 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 
   std::cout << "Finished allocating mem" << std::endl;
 
+  for (auto dd : m_Buffer) {
+    std::cout << dd << std::endl;
+  }
   thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer);
   cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(buffer.data()));
 
