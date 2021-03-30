@@ -660,6 +660,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "could not deallocate offd\n");
   CudaTest("couldn't deallocate offd");
 
+  std::cout << "compression succeed" << std::endl;
   return out_size;
 }
 
