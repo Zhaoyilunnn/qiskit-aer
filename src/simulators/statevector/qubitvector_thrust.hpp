@@ -408,9 +408,6 @@ protected:
   AERDeviceVector<int> m_cutl;
   AERDeviceVector<char> m_dbufl;
 
-  if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
-  fprintf(stderr, "could not allocate dbufd\n");
-  CudaTest("couldn't allocate dbufd");
 public:
   QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size), m_offl(BLOCKS*WARPS_BLOCK), m_cutl(BLOCKS*WARPS_BLOCK)
   {
