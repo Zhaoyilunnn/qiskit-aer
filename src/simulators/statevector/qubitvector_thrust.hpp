@@ -735,6 +735,9 @@ public:
   int Allocate(uint_t size,uint_t bufferSize = 0);
   int AllocateParameters(int bits);
 
+  // Compression and decompression
+  uint_t Compression(uint_t src, int chunkBits, int nChunks);
+
   int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks, cudaStream_t stream);
   int Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,int chunkBits,int nChunks, cudaStream_t stream);
 
@@ -884,6 +887,28 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
   return 0;
 }
 
+// Compression
+template <typename data_t>
+uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks)
+{
+  uint_t srcPos, size;
+  destPos = dest << chunkBits;
+  srcPos = m_size + (bufSrc << chunkBits);
+  size = (1ull << chunkBits) * nChunks;
+
+  // Compression before copying back to CPU
+  std::cout << "size before compression " << size << std::endl;
+  std::cout << "srcPos before compression " << srcPos << std::endl;
+  std::cout << "destPos before compression " << destPos << std::endl;
+  if (size >= 32) // temporally set this
+    size = m_pChunks->Compress(srcPos, size);
+  std::cout << "size after compression " << size << std::endl;
+  std::cout << "srcPos after compression " << srcPos << std::endl;
+  std::cout << "destPos after compression " << destPos << std::endl;
+  std::cout << "Compression done" << std::endl;
+  return size;
+}
+
 //copy chunk from other container to buffer
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,
@@ -920,17 +945,6 @@ int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uin
   destPos = dest << chunkBits;
   srcPos = m_size + (bufSrc << chunkBits);
   size = (1ull << chunkBits) * nChunks;
-
-  // Compression before copying back to CPU
-  std::cout << "size before compression " << size << std::endl;
-  std::cout << "srcPos before compression " << srcPos << std::endl;
-  std::cout << "destPos before compression " << destPos << std::endl;
-  if (size >= 32) // temporally set this
-    size = m_pChunks->Compress(srcPos, size);
-  std::cout << "size after compression " << size << std::endl;
-  std::cout << "srcPos after compression " << srcPos << std::endl;
-  std::cout << "destPos after compression " << destPos << std::endl;
-  std::cout << "Compression done" << std::endl;
 
   if(m_iDevice >=0 && chunks.DeviceID() >= 0){
     if(m_p2pEnable[chunks.DeviceID()]){
@@ -2812,6 +2826,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               //copy back
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
+                m_Chunks[iPlace].Compression(i, chunkBits, 1);
                 m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                      chunkBits, 1, m_Streams[iStream]);
               }
@@ -2850,6 +2865,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           //copy back
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
+            m_Chunks[iPlace].Compression(i, chunkBits, 1);
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1, m_Streams[iStream]);
           }
