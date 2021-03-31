@@ -405,8 +405,9 @@ class QubitVectorDeviceBuffer : public QubitVectorBuffer<data_t>
 protected:
   AERDeviceVector<data_t> m_Buffer;
   AERDeviceVector<int> m_offl;
+  AERDeviceVector<int> m_cutl(blocks * warpsperblock, 0);
 public:
-  QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size), m_offl(BLOCKS*WARPS_BLOCK)
+  QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size), m_offl(BLOCKS*WARPS_BLOCK), m_cutl(BLOCKS*WARPS_BLOCK)
   {
     ;
   }
@@ -540,7 +541,6 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   // allocate GPU buffers
   ull *cbufl; // uncompressed data
   char *dbufl; // compressed data
-  thrust::device_vector<int> cutl(blocks * warpsperblock, 0);
 
   if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
     fprintf(stderr, "could not allocate dbufd\n");
@@ -562,11 +562,11 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   int curr = 0, before = 0, d = 0;
   for (int i = 0; i < blocks * warpsperblock; i++) {
     curr += per;
-    cutl[i] = min(curr, doubles);
-    if (cutl[i] - before > 0) {
-      d = cutl[i] - before;
+    m_cutl[i] = min(curr, doubles);
+    if (m_cutl[i] - before > 0) {
+      d = m_cutl[i] - before;
     }
-    before = cutl[i];
+    before = m_cutl[i];
   }
   std::cout << "finish chunk assignments" << std::endl;
 
@@ -581,10 +581,10 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "copying of dbufl to device failed\n");
   CudaTest("dbufl copy to device failed");
 
-  auto cutl_address = thrust::raw_pointer_cast(cutl.data());
-  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl_address, sizeof(void *)))
-    fprintf(stderr, "copying of cutl to device failed\n");
-  CudaTest("cutl copy to device failed");
+  auto m_cutl_address = thrust::raw_pointer_cast(m_cutl.data());
+  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &m_cutl_address, sizeof(void *)))
+    fprintf(stderr, "copying of m_cutl to device failed\n");
+  CudaTest("m_cutl copy to device failed");
 
   auto offl_adress = thrust::raw_pointer_cast(m_offl.data());
   if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl_adress, sizeof(void *)))
@@ -598,7 +598,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   // output m_offlset table
   for(int i = 0; i < blocks * warpsperblock; i++) {
     int start = 0;
-    if(i > 0) start = cutl[i-1];
+    if(i > 0) start = m_cutl[i-1];
     m_offl[i] -= ((start+1)/2*17);
     sum_byte_compressed += m_offl[i];
   }
