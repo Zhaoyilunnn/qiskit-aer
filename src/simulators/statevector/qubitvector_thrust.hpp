@@ -386,7 +386,7 @@ public:
   virtual void Copy(const std::vector<data_t>& v) = 0;
 
   virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0) = 0;
-  virtual uint_t Compress(uint_t pos, uint_t size) = 0;
+  virtual uint_t Compress(uint_t pos, uint_t size, cudaStream_t stream=0) = 0;
 
   virtual void CopyIn(uint_t pos,const data_t* pSrc,uint_t size) = 0;
   virtual void CopyOut(uint_t pos,data_t* pDest,uint_t size) = 0;
@@ -448,7 +448,7 @@ public:
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 1,cudaStream_t stream=0);
 
   // Data compression
-  uint_t Compress(uint_t pos, uint_t size);
+  uint_t Compress(uint_t pos, uint_t size, cudaStream_t stream=0);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -500,7 +500,7 @@ public:
   }
 
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0);
-  uint_t Compress(uint_t pos, uint_t size);
+  uint_t Compress(uint_t pos, uint_t size, cudaStream_t stream=0);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -528,7 +528,7 @@ void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>*
 }
 
 template <typename data_t>
-uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
+uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStream_t stream=0)
 {
   uint_t out_size = size;
   int blocks = 28, warpsperblock = 18, dimensionality = 2;
@@ -571,27 +571,27 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   std::cout << "finish chunk assignments" << std::endl;
 
   // copy buffer starting addresses (pointers) and values to constant memory
-  if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(dimensionalityd, &dimensionality, sizeof(int), stream))
     fprintf(stderr, "copying of dimensionality to device failed\n");
   CudaTest("dimensionality copy to device failed");
-  if (cudaSuccess != cudaMemcpyToSymbol(cbufd, &cbufl, sizeof(void *)))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd, &cbufl, sizeof(void *), stream))
     fprintf(stderr, "copying of cbufl to device failed\n");
   CudaTest("cbufl copy to device failed");
-  if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(dbufd, &dbufl, sizeof(void *), stream))
     fprintf(stderr, "copying of m_dbufl to device failed\n");
   CudaTest("m_dbufl copy to device failed");
 
   auto m_cutl_address = thrust::raw_pointer_cast(m_cutl.data());
-  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &m_cutl_address, sizeof(void *)))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(cutd, &m_cutl_address, sizeof(void *), stream))
     fprintf(stderr, "copying of m_cutl to device failed\n");
   CudaTest("m_cutl copy to device failed");
 
   auto offl_adress = thrust::raw_pointer_cast(m_offl.data());
-  if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl_adress, sizeof(void *)))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(offd, &offl_adress, sizeof(void *), stream))
     fprintf(stderr, "copying of m_offl to device failed\n");
   CudaTest("m_offl copy to device failed");
 
-  CompressionKernel<<<blocks, WARPSIZE*warpsperblock>>>();
+  CompressionKernel<<<blocks, WARPSIZE*warpsperblock, stream>>>();
   CudaTest("compression kernel launch failed");
 
   int sum_byte_compressed = 0;
@@ -641,7 +641,7 @@ void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* p
 }
 
 template <typename data_t>
-uint_t QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size)
+uint_t QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStream_t stream=0)
 {
   return 0;
 }
@@ -733,7 +733,7 @@ public:
   int AllocateParameters(int bits);
 
   // Compression and decompression
-  uint_t Compression(uint_t src, int chunkBits, int nChunks);
+  uint_t Compression(uint_t src, int chunkBits, int nChunks, cudaStream_t stream);
 
   int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks, cudaStream_t stream);
   int Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,int chunkBits,int nChunks, cudaStream_t stream);
@@ -886,7 +886,7 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
 
 // Compression
 template <typename data_t>
-uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks)
+uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream)
 {
   uint_t srcPos, size;
   srcPos = m_size + (bufSrc << chunkBits);
@@ -896,7 +896,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
   std::cout << "size before compression " << size << std::endl;
   std::cout << "srcPos before compression " << srcPos << std::endl;
   if (size >= 32) // temporally set this
-    size = m_pChunks->Compress(srcPos, size);
+    size = m_pChunks->Compress(srcPos, size, stream);
   std::cout << "size after compression " << size << std::endl;
   std::cout << "srcPos after compression " << srcPos << std::endl;
   std::cout << "Compression done" << std::endl;
@@ -2820,7 +2820,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               //copy back
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
-                m_Chunks[iPlace].Compression(i, chunkBits, 1);
+                m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream]);
                 m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                      chunkBits, 1, m_Streams[iStream]);
               }
@@ -2859,7 +2859,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           //copy back
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
-            m_Chunks[iPlace].Compression(i, chunkBits, 1);
+            m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream]);
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1, m_Streams[iStream]);
           }
