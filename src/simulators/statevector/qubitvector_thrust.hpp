@@ -571,23 +571,23 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
   std::cout << "finish chunk assignments" << std::endl;
 
   // copy buffer starting addresses (pointers) and values to constant memory
-  if (cudaSuccess != cudaMemcpyToSymbolAsync(dimensionalityd, &dimensionality, sizeof(int), stream))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(dimensionalityd, &dimensionality, sizeof(int), 0, cudaMemcpyHostToDevice, stream))
     fprintf(stderr, "copying of dimensionality to device failed\n");
   CudaTest("dimensionality copy to device failed");
-  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd, &cbufl, sizeof(void *), stream))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd, &cbufl, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
     fprintf(stderr, "copying of cbufl to device failed\n");
   CudaTest("cbufl copy to device failed");
-  if (cudaSuccess != cudaMemcpyToSymbolAsync(dbufd, &dbufl, sizeof(void *), stream))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(dbufd, &dbufl, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
     fprintf(stderr, "copying of m_dbufl to device failed\n");
   CudaTest("m_dbufl copy to device failed");
 
   auto m_cutl_address = thrust::raw_pointer_cast(m_cutl.data());
-  if (cudaSuccess != cudaMemcpyToSymbolAsync(cutd, &m_cutl_address, sizeof(void *), stream))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(cutd, &m_cutl_address, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
     fprintf(stderr, "copying of m_cutl to device failed\n");
   CudaTest("m_cutl copy to device failed");
 
   auto offl_adress = thrust::raw_pointer_cast(m_offl.data());
-  if (cudaSuccess != cudaMemcpyToSymbolAsync(offd, &offl_adress, sizeof(void *), stream))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(offd, &offl_adress, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
     fprintf(stderr, "copying of m_offl to device failed\n");
   CudaTest("m_offl copy to device failed");
 
