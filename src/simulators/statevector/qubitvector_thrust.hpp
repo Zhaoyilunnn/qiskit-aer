@@ -84,6 +84,9 @@ double mysecond()
 #define AER_MAX_GPU_BUFFERS   64
 #define AER_NUM_STREAM        2
 
+#define BLOCKS                28
+#define WARPS_BLOCK           18
+#define DIM_COMPRESS          2
 
 #define ull unsigned long long
 #define MAX (64*1024*1024)
@@ -401,8 +404,9 @@ class QubitVectorDeviceBuffer : public QubitVectorBuffer<data_t>
 {
 protected:
   AERDeviceVector<data_t> m_Buffer;
+  AERDeviceVector<int> m_offl;
 public:
-  QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size)
+  QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size), m_offl(BLOCKS*WARPS_BLOCK)
   {
     ;
   }
@@ -526,11 +530,6 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   int blocks = 28, warpsperblock = 18, dimensionality = 2;
   cudaGetLastError();  // reset error value
 
-  int *off = (int *)malloc(sizeof(int) * blocks * warpsperblock); // offset table
-  if (off == NULL) {
-    fprintf(stderr, "cannot allocate off\n"); exit(-1);
-  }
-
   // Determine doubles size
   int doubles = 2 * size;  // The size of data to be compressed
   std::cout << "Num doubles to be compress: " << doubles << std::endl;
@@ -545,15 +544,10 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   ull *cbufl; // uncompressed data
   char *dbufl; // compressed data
   thrust::device_vector<int> cutl(blocks * warpsperblock, 0);
-  int *offl; // offset table
 
   if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
     fprintf(stderr, "could not allocate dbufd\n");
   CudaTest("couldn't allocate dbufd");
-
-  if (cudaSuccess != cudaMalloc((void **)&offl, sizeof(int) * blocks * warpsperblock))
-    fprintf(stderr, "could not allocate offd\n");
-  CudaTest("couldn't allocate offd");
 
   std::cout << "Finished allocating mem" << std::endl;
 
@@ -604,32 +598,28 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl_address, sizeof(void *)))
     fprintf(stderr, "copying of cutl to device failed\n");
   CudaTest("cutl copy to device failed");
-  if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
-    fprintf(stderr, "copying of offl to device failed\n");
-  CudaTest("offl copy to device failed");
+
+  auto offl_adress = thrust::raw_pointer_cast(m_offl.data());
+  if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl_adress, sizeof(void *)))
+    fprintf(stderr, "copying of m_offl to device failed\n");
+  CudaTest("m_offl copy to device failed");
 
   CompressionKernel<<<blocks, WARPSIZE*warpsperblock>>>();
   CudaTest("compression kernel launch failed");
 
   int sum_byte_compressed = 0;
-  // output offlset table
+  // output m_offlset table
   for(int i = 0; i < blocks * warpsperblock; i++) {
     int start = 0;
     if(i > 0) start = cutl[i-1];
-    offl[i] -= ((start+1)/2*17);
-    sum_byte_compressed += offl[i];
+    m_offl[i] -= ((start+1)/2*17);
+    sum_byte_compressed += m_offl[i];
   }
   std::cout << "Num bytes after compression " << sum_byte_compressed << std::endl;
-
-  free(off);
 
   if (cudaSuccess != cudaFree(dbufl))
     fprintf(stderr, "could not deallocate dbufd\n");
   CudaTest("couldn't deallocate dbufd");
-
-  if (cudaSuccess != cudaFree(offl))
-    fprintf(stderr, "could not deallocate offd\n");
-  CudaTest("couldn't deallocate offd");
 
   return out_size;
 }
