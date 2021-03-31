@@ -528,7 +528,7 @@ void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>*
 }
 
 template <typename data_t>
-uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStream_t stream=0)
+uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStream_t stream)
 {
   uint_t out_size = size;
   int blocks = 28, warpsperblock = 18, dimensionality = 2;
@@ -641,7 +641,7 @@ void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* p
 }
 
 template <typename data_t>
-uint_t QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStream_t stream=0)
+uint_t QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStream_t stream)
 {
   return 0;
 }
