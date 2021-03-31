@@ -523,33 +523,17 @@ template <typename data_t>
 uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 {
   uint_t out_size = size;
-//  cudaMemcpyToSymbol(cbufd, thrust::raw_pointer_cast(m_Buffer.data()), sizeof(void *));
   int blocks = 28, warpsperblock = 18, dimensionality = 2;
   cudaGetLastError();  // reset error value
 
-  // allocate CPU buffers
-  ull *cbuf = (ull *)malloc(sizeof(ull) * MAX); // uncompressed data
-  if (cbuf == NULL) {
-    fprintf(stderr, "cannot allocate cbuf\n"); exit(-1);
-  }
-  char *dbuf = (char *)malloc(sizeof(char) * ((MAX+1)/2*17)); // compressed data
-  if (dbuf == NULL) {
-    fprintf(stderr, "cannot allocate dbuf\n"); exit(-1);
-  }
-//  int *cut = (int *)malloc(sizeof(int) * blocks * warpsperblock); // chunk boundaries
-//  if (cut == NULL) {
-//    fprintf(stderr, "cannot allocate cut\n"); exit(-1);
-//  }
   int *off = (int *)malloc(sizeof(int) * blocks * warpsperblock); // offset table
   if (off == NULL) {
     fprintf(stderr, "cannot allocate off\n"); exit(-1);
   }
 
   // Determine doubles size
-//  int doubles = 2 * m_Buffer.size();  // The size of data to be compressed
   int doubles = 2 * size;  // The size of data to be compressed
   std::cout << "Num doubles to be compress: " << doubles << std::endl;
-//  cbuf = thrust::raw_pointer_cast(m_Buffer.data());
 
   // calculate required padding for last chunk
   int padding = ((doubles + WARPSIZE - 1) & -WARPSIZE) - doubles;
@@ -560,18 +544,13 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   // allocate GPU buffers
   ull *cbufl; // uncompressed data
   char *dbufl; // compressed data
-//  int *cutl; // chunk boundaries
   thrust::device_vector<int> cutl(blocks * warpsperblock, 0);
   int *offl; // offset table
-//  if (cudaSuccess != cudaMalloc((void **)&cbufl, sizeof(ull) * doubles))
-//    fprintf(stderr, "could not allocate cbufd\n");
-  CudaTest("couldn't allocate cbufd");
+
   if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
     fprintf(stderr, "could not allocate dbufd\n");
   CudaTest("couldn't allocate dbufd");
-//  if (cudaSuccess != cudaMalloc((void **)&cutl, sizeof(int) * blocks * warpsperblock))
-//    fprintf(stderr, "could not allocate cutd\n");
-  CudaTest("couldn't allocate cutd");
+
   if (cudaSuccess != cudaMalloc((void **)&offl, sizeof(int) * blocks * warpsperblock))
     fprintf(stderr, "could not allocate offd\n");
   CudaTest("couldn't allocate offd");
@@ -620,7 +599,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
     fprintf(stderr, "copying of dbufl to device failed\n");
   CudaTest("dbufl copy to device failed");
-//  if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
+
   auto cutl_address = thrust::raw_pointer_cast(cutl.data());
   if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl_address, sizeof(void *)))
     fprintf(stderr, "copying of cutl to device failed\n");
@@ -632,35 +611,22 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   CompressionKernel<<<blocks, WARPSIZE*warpsperblock>>>();
   CudaTest("compression kernel launch failed");
 
-  // transfer offsets back to CPU
-  if(cudaSuccess != cudaMemcpy(off, offl, sizeof(int) * blocks * warpsperblock, cudaMemcpyDeviceToHost))
-    fprintf(stderr, "copying of off from device failed\n");
-  CudaTest("off copy from device failed");
-  
   int sum_byte_compressed = 0;
-  // output offset table
+  // output offlset table
   for(int i = 0; i < blocks * warpsperblock; i++) {
     int start = 0;
     if(i > 0) start = cutl[i-1];
-    off[i] -= ((start+1)/2*17);
-    sum_byte_compressed += off[i];    
+    offl[i] -= ((start+1)/2*17);
+    sum_byte_compressed += offl[i];
   }
   std::cout << "Num bytes after compression " << sum_byte_compressed << std::endl;
 
-  free(cbuf);
-  free(dbuf);
-//  free(cut);
   free(off);
 
-//  if (cudaSuccess != cudaFree(cbufl))
-//    fprintf(stderr, "could not deallocate cbufd\n");
-  CudaTest("couldn't deallocate cbufd");
   if (cudaSuccess != cudaFree(dbufl))
     fprintf(stderr, "could not deallocate dbufd\n");
   CudaTest("couldn't deallocate dbufd");
-//  if (cudaSuccess != cudaFree(cutl))
-//    fprintf(stderr, "could not deallocate cutd\n");
-  CudaTest("couldn't deallocate cutd");
+
   if (cudaSuccess != cudaFree(offl))
     fprintf(stderr, "could not deallocate offd\n");
   CudaTest("couldn't deallocate offd");
