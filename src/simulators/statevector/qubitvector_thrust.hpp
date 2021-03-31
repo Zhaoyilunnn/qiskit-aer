@@ -412,32 +412,15 @@ public:
   QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size), m_offl(BLOCKS*WARPS_BLOCK), m_cutl(BLOCKS*WARPS_BLOCK)
   {
     int doubles = 2 * size / AER_MAX_GPU_BUFFERS;
+    std::cout << "Num doubles to be compress: " << doubles << std::endl;
     m_dbufl.resize((doubles+1)/2*17);
 
+    char* dbufl = thrust::raw_pointer_cast(m_dbufl.data());
     int blocks = 28, warpsperblock = 18, dimensionality = 2;
     cudaGetLastError();  // reset error value
 
-    // Determine doubles size
-//    int doubles = 2 * size;  // The size of data to be compressed
-    std::cout << "Num doubles to be compress: " << doubles << std::endl;
-
     // calculate required padding for last chunk
     // In our implementation, since chunk size is always times of 32, we won't worry about padding
-
-    // allocate GPU buffers
-    ull *cbufl; // uncompressed data
-    char* dbufl;
-
-    std::cout << "Finished allocating mem" << std::endl;
-
-    for (int cc = 0; cc < 10; cc++) {
-      std::cout << m_Buffer[cc] << std::endl;
-    }
-//  thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer.begin(), m_Buffer.begin() + size);
-    cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data() + size));
-    dbufl = thrust::raw_pointer_cast(m_dbufl.data());
-
-    std::cout << "Finished converting number" << std::endl;
     // determine chunk assignments per warp
     int per = (doubles + blocks * warpsperblock - 1) / (blocks * warpsperblock);
     if (per < WARPSIZE) per = WARPSIZE;
@@ -454,30 +437,17 @@ public:
     std::cout << "finish chunk assignments" << std::endl;
 
     // copy buffer starting addresses (pointers) and values to constant memory
-//    if (cudaSuccess != cudaMemcpyToSymbolAsync(dimensionalityd, &dimensionality, sizeof(int), 0, cudaMemcpyHostToDevice, stream))
     if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
       fprintf(stderr, "copying of dimensionality to device failed\n");
-//  CudaTest("dimensionality copy to device failed");
-//    if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd, &cbufl, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
-    if (cudaSuccess != cudaMemcpyToSymbol(cbufd, &cbufl, sizeof(void *)))
-      fprintf(stderr, "copying of cbufl to device failed\n");
-//  CudaTest("cbufl copy to device failed");
-//    if (cudaSuccess != cudaMemcpyToSymbolAsync(dbufd, &dbufl, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
     if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
       fprintf(stderr, "copying of m_dbufl to device failed\n");
-//  CudaTest("m_dbufl copy to device failed");
 
     auto m_cutl_address = thrust::raw_pointer_cast(m_cutl.data());
-//    if (cudaSuccess != cudaMemcpyToSymbolAsync(cutd, &m_cutl_address, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
     if (cudaSuccess != cudaMemcpyToSymbol(cutd, &m_cutl_address, sizeof(void *)))
       fprintf(stderr, "copying of m_cutl to device failed\n");
-//  CudaTest("m_cutl copy to device failed");
-
     auto offl_adress = thrust::raw_pointer_cast(m_offl.data());
-//    if (cudaSuccess != cudaMemcpyToSymbolAsync(offd, &offl_adress, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
     if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl_adress, sizeof(void *)))
       fprintf(stderr, "copying of m_offl to device failed\n");
-//  CudaTest("m_offl copy to device failed");
   }
 
   AERDeviceVector<data_t>& Buffer(void)
@@ -596,10 +566,17 @@ template <typename data_t>
 uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStream_t stream)
 {
   uint_t out_size = size;
+  ull *cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data() + size)); // uncompressed data
+
+//    for (int cc = 0; cc < 10; cc++) {
+//      std::cout << m_Buffer[cc] << std::endl;
+//    }
+
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd, &cbufl, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
+    fprintf(stderr, "copying of cbufl to device failed\n");
 
   CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>();
-//  CudaTest("compression kernel launch failed");
-
+  std::cout << "Compression done" << std::endl;
 //  int sum_byte_compressed = 0;
 //  // output m_offlset table
 //  for(int i = 0; i < blocks * warpsperblock; i++) {
