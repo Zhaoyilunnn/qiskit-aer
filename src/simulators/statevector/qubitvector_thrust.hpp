@@ -535,10 +535,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   std::cout << "Num doubles to be compress: " << doubles << std::endl;
 
   // calculate required padding for last chunk
-  int padding = ((doubles + WARPSIZE - 1) & -WARPSIZE) - doubles;
-  doubles += padding;
-
-  std::cout << "Num doubles after cal padding " << doubles << std::endl;
+  // In our implementation, since chunk size is always times of 32, we won't worry about padding
 
   // allocate GPU buffers
   ull *cbufl; // uncompressed data
@@ -554,8 +551,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   for (int cc = 0; cc < 10; cc++) {
     std::cout << m_Buffer[cc] << std::endl;
   }
-  thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer.begin(), m_Buffer.begin() + size);
-  cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(buffer.data()));
+//  thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer.begin(), m_Buffer.begin() + size);
+  cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data() + size));
 
   std::cout << "Finished converting number" << std::endl;
   // determine chunk assignments per warp
@@ -572,16 +569,6 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     before = cutl[i];
   }
   std::cout << "finish chunk assignments" << std::endl;
-  // set the pad values to ensure correct prediction
-  if (d <= WARPSIZE) {
-    for (int i = doubles - padding; i < doubles; i++) {
-      cbufl[i] = 0;
-    }
-  } else {
-    for (int i = doubles - padding; i < doubles; i++) {
-      cbufl[i] = cbufl[(i & -WARPSIZE) - (dimensionality - i % dimensionality)];
-    }
-  }
 
   // copy buffer starting addresses (pointers) and values to constant memory
   if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
