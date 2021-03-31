@@ -406,10 +406,16 @@ protected:
   AERDeviceVector<data_t> m_Buffer;
   AERDeviceVector<int> m_offl;
   AERDeviceVector<int> m_cutl;
+  AERDeviceVector<char> m_dbufl;
+
+  if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
+  fprintf(stderr, "could not allocate dbufd\n");
+  CudaTest("couldn't allocate dbufd");
 public:
   QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size), m_offl(BLOCKS*WARPS_BLOCK), m_cutl(BLOCKS*WARPS_BLOCK)
   {
-    ;
+    int doubles = 2 * size / AER_MAX_GPU_BUFFERS;
+    m_dbufl.resize((doubles+1)/2*17);
   }
 
   AERDeviceVector<data_t>& Buffer(void)
@@ -540,11 +546,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
 
   // allocate GPU buffers
   ull *cbufl; // uncompressed data
-  char *dbufl; // compressed data
-
-  if (cudaSuccess != cudaMalloc((void **)&dbufl, sizeof(char) * ((doubles+1)/2*17)))
-    fprintf(stderr, "could not allocate dbufd\n");
-  CudaTest("couldn't allocate dbufd");
+  char* dbufl;
 
   std::cout << "Finished allocating mem" << std::endl;
 
@@ -553,6 +555,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
   }
 //  thrust::device_vector<thrust::complex<data_t>> buffer(m_Buffer.begin(), m_Buffer.begin() + size);
   cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data() + size));
+  dbufl = thrust::raw_pointer_cast(m_dbufl.data());
 
   std::cout << "Finished converting number" << std::endl;
   // determine chunk assignments per warp
@@ -578,8 +581,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     fprintf(stderr, "copying of cbufl to device failed\n");
   CudaTest("cbufl copy to device failed");
   if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
-    fprintf(stderr, "copying of dbufl to device failed\n");
-  CudaTest("dbufl copy to device failed");
+    fprintf(stderr, "copying of m_dbufl to device failed\n");
+  CudaTest("m_dbufl copy to device failed");
 
   auto m_cutl_address = thrust::raw_pointer_cast(m_cutl.data());
   if (cudaSuccess != cudaMemcpyToSymbol(cutd, &m_cutl_address, sizeof(void *)))
@@ -603,10 +606,6 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size)
     sum_byte_compressed += m_offl[i];
   }
   std::cout << "Num bytes after compression " << sum_byte_compressed << std::endl;
-
-  if (cudaSuccess != cudaFree(dbufl))
-    fprintf(stderr, "could not deallocate dbufd\n");
-  CudaTest("couldn't deallocate dbufd");
 
   return out_size;
 }
