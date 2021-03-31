@@ -889,19 +889,16 @@ template <typename data_t>
 uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks)
 {
   uint_t srcPos, size;
-  destPos = dest << chunkBits;
   srcPos = m_size + (bufSrc << chunkBits);
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
   std::cout << "size before compression " << size << std::endl;
   std::cout << "srcPos before compression " << srcPos << std::endl;
-  std::cout << "destPos before compression " << destPos << std::endl;
   if (size >= 32) // temporally set this
     size = m_pChunks->Compress(srcPos, size);
   std::cout << "size after compression " << size << std::endl;
   std::cout << "srcPos after compression " << srcPos << std::endl;
-  std::cout << "destPos after compression " << destPos << std::endl;
   std::cout << "Compression done" << std::endl;
   return size;
 }
