@@ -405,7 +405,7 @@ class QubitVectorDeviceBuffer : public QubitVectorBuffer<data_t>
 protected:
   AERDeviceVector<data_t> m_Buffer;
   AERDeviceVector<int> m_offl;
-  AERDeviceVector<int> m_cutl(blocks * warpsperblock, 0);
+  AERDeviceVector<int> m_cutl;
 public:
   QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size), m_offl(BLOCKS*WARPS_BLOCK), m_cutl(BLOCKS*WARPS_BLOCK)
   {
