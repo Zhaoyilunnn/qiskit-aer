@@ -82,7 +82,7 @@ double mysecond()
 #define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
 #define AER_MAX_GPU_BUFFERS   64
-#define AER_NUM_STREAM        2
+#define AER_NUM_STREAM        3
 
 #define BLOCKS                28
 #define WARPS_BLOCK           18
@@ -2821,6 +2821,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
                 m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream]);
+                iStream = (iStream + 1) % num_streams;
                 m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                      chunkBits, 1, m_Streams[iStream]);
               }
@@ -2860,6 +2861,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
             m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream]);
+            iStream = (iStream + 1) % num_streams;
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1, m_Streams[iStream]);
           }
