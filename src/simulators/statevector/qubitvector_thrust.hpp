@@ -597,7 +597,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
 {
   uint_t out_size = size;
 
-  CompressionKernel<<<blocks, WARPSIZE*warpsperblock, 0, stream>>>();
+  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>();
 //  CudaTest("compression kernel launch failed");
 
 //  int sum_byte_compressed = 0;
