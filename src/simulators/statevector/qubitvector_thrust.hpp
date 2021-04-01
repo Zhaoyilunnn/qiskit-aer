@@ -559,7 +559,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
 }
 
 template <typename data_t>
-void QubitVectorDeviceBuffer<data_t>::Decompress(uint_t pos, uint_t size, cudaStream_t stream)
+void QubitVectorDeviceBuffer<data_t>::Decompress(uint_t pos, uint_t size, cudaStream_t stream, int iStream)
 {
   ;
 }
@@ -604,7 +604,7 @@ uint_t QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStre
 }
 
 template <typename data_t>
-void QubitVectorHostBuffer<data_t>::Decompress(uint_t pos, uint_t size, cudaStream_t stream)
+void QubitVectorHostBuffer<data_t>::Decompress(uint_t pos, uint_t size, cudaStream_t stream, int iStream)
 {
   ;
 }
