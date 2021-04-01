@@ -1009,7 +1009,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer<d
     int* off = (int*)chunks.m_pChunks->BufferPtr()+destPos_off;
     for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
       int offset, start = 0;
-      if (i > 0) start = chunks.m_pCut[i - 1];
+      if (i > 0) start = chunks.m_pCut->Get(i);
       offset = ((start+1)/2*17);
       cudaMemcpyAsync(chunks.m_pChunks->BufferPtr()+destPos_dbuf+offset,
                       m_pDbuf->BufferPtr()+offset, sizeof(char)*off[i],
