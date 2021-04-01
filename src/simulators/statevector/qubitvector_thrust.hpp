@@ -1043,6 +1043,9 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
     // copy off to host off
     cudaMemcpyAsync(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int),
                     cudaMemcpyDeviceToHost, stream);
+    for (int i = 0; i < 504; i++) {
+      std::cout << chunks.m_pOff->Get(i) << std::endl;
+    }
     std::cout << "Copying off done" << std::endl;
     // set offset table
     for (int i = 0; i < BLOCKS * WARPS_BLOCK; i++) {
