@@ -1007,16 +1007,17 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer<d
 //  // currently we only support copying to device
 //  if (m_iDevice >= 0 && chunks.DeviceID() < 0) {
 //    // Does not need to copy off from host to device
-//
+//    int* offs = (int*)(chunks.m_pChunks->BufferPtr()+srcPos_off);
 //    for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
 //      int chbeg, start = 0;
 //      if (i > 0) start = chunks.m_pCut->Get(i-1);
 //      chbeg = ((start+1)/2*17);
-//      cudaMemcpyAsync(m_pDbufD->BufferPtr()+chbeg, chunks.m_pChunks->BufferPtr())
+//      cudaMemcpyAsync(m_pDbufD->BufferPtr()+chbeg, chunks.m_pChunks->BufferPtr()+srcPos_dbuf,
+//                      sizeof(char)*offs[i], cudaMemcpyHostToDevice, stream);
 //    }
 //
 //  }
-  return 0;
+//  return 0;
 }
 
 template <typename data_t>
@@ -1033,6 +1034,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer<d
     // copy off to host off
     cudaMemcpyAsync(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int),
                     cudaMemcpyDeviceToHost, stream);
+    std::cout << "Copying off done" << std::endl;
     // set offset table
     for (int i = 0; i < BLOCKS * WARPS_BLOCK; i++) {
       int start = 0;
