@@ -601,6 +601,7 @@ uint_t QubitVectorHostBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStre
   return 0;
 }
 
+template <typename data_t>
 void QubitVectorHostBuffer<data_t>::Decompress(uint_t pos, uint_t size, cudaStream_t stream)
 {
   ;
