@@ -636,6 +636,10 @@ public:
     m_pOffsets = NULL;
     m_pParams = NULL;
 
+    m_pOff = NULL;
+    m_pDbuf = NULL;
+    m_pCut = NULL;
+
     m_size = 0;
     m_bufferSize = 0;
 
