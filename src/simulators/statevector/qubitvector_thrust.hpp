@@ -1017,7 +1017,7 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer<d
 //    }
 //
 //  }
-//  return 0;
+  return 0;
 }
 
 template <typename data_t>
