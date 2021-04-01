@@ -2745,7 +2745,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   double ret = 0.0;
   int noDataExchange = 0;
 
-  if (num_qubits_ <= 1) return ret;
+  if (num_qubits_ <= 2) return ret;
 
 #ifdef AER_DEBUG
   DebugMsg(func.Name(),qubits);
