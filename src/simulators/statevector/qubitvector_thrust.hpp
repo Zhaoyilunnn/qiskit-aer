@@ -539,7 +539,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
 //      std::cout << m_Buffer[cc] << std::endl;
 //    }
 
-  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd[iStream], &cbufl, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd, &cbufl, sizeof(void *), iStream*sizeof(void*), cudaMemcpyHostToDevice, stream))
     fprintf(stderr, "copying of cbufl to device failed\n");
 
   CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(iStream);
