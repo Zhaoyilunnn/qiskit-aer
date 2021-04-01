@@ -661,8 +661,10 @@ public:
     m_pOffsets = NULL;
     m_pParams = NULL;
 
-    m_pOff = {0};
-    m_pDbuf = {0};
+    for (int i = 0; i < AER_NUM_STREAM; i++) {
+      m_pOff[i] = NULL;
+      m_pDbuf[i] = NULL;
+    }
     m_pDbufD = NULL;
     m_pCut = NULL;
     m_pCutD = NULL;
