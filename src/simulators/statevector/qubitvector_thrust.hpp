@@ -387,6 +387,7 @@ public:
 
   virtual void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0) = 0;
   virtual uint_t Compress(uint_t pos, uint_t size, cudaStream_t stream=0) = 0;
+  virtual void Decompress(uint_t pos, uint_t size, cudaStream_t stream=0) = 0;
 
   virtual void CopyIn(uint_t pos,const data_t* pSrc,uint_t size) = 0;
   virtual void CopyOut(uint_t pos,data_t* pDest,uint_t size) = 0;
@@ -445,6 +446,7 @@ public:
 
   // Data compression
   uint_t Compress(uint_t pos, uint_t size, cudaStream_t stream=0);
+  void Decompress(uint_t pos, uint_t size, cudaStream_t stream=0);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -497,6 +499,7 @@ public:
 
   void Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,uint_t size,int isDevice = 0,cudaStream_t stream=0);
   uint_t Compress(uint_t pos, uint_t size, cudaStream_t stream=0);
+  void Decompress(uint_t pos, uint_t size, cudaStream_t stream=0);
 
   void CopyIn(uint_t pos,const data_t* pSrc,uint_t size);
   void CopyOut(uint_t pos,data_t* pDest,uint_t size);
@@ -549,6 +552,11 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
 //  std::cout << "Num bytes after compression " << sum_byte_compressed << std::endl;
 
   return out_size;
+}
+
+void QubitVectorDeviceBuffer<data_t>::Decompress(uint_t pos, uint_t size, cudaStream_t stream)
+{
+  ;
 }
 
 template <typename data_t>
@@ -687,7 +695,9 @@ public:
   int AllocateParameters(int bits);
 
   // Compression and decompression
-  uint_t Compression(uint_t src, int chunkBits, int nChunks, cudaStream_t stream);
+  uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream);
+  void Decompression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream);
+  // Compression and decompression done
 
   int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks, cudaStream_t stream);
   int Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufSrc,int chunkBits,int nChunks, cudaStream_t stream);
@@ -907,11 +917,24 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
-  if (size >= 32) {// temporally set this
+  if (size >= 32) {// temporally set this TODO: fix this
     size = m_pChunks->Compress(srcPos, size, stream);
     std::cout << "Compression done" << std::endl;
   }
   return size;
+}
+
+template <typename data_t>
+void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, int nChunks, int stream)
+{
+  uint_t srcPos, size;
+  srcPos = m_size + (bufSrc << chunkBits);
+
+  // Decompression before updating
+  if (size >= 32) {
+    m_pChunks->Decompress(srcPos, size, stream);
+    std::cout << "Decompression done" << std::endl;
+  }
 }
 
 //copy chunk from other container to buffer
