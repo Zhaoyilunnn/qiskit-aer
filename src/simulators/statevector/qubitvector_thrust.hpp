@@ -651,7 +651,9 @@ public:
 
     m_pOff = NULL;
     m_pDbuf = NULL;
+    m_pDbufD = NULL;
     m_pCut = NULL;
+    m_pCutD = NULL;
 
     m_size = 0;
     m_bufferSize = 0;
@@ -760,6 +762,12 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
   }
   if (m_pDbuf) {
     delete m_pDbuf;
+  }
+  if (m_pDbufD) {
+    delete m_pDbufD;
+  }
+  if (m_pCutD) {
+    delete m_pCutD;
   }
 }
 
