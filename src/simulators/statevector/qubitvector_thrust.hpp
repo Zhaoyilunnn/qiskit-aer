@@ -1029,6 +1029,8 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
   uint_t destPos_off, destPos_dbuf;
   destPos_off = dest << chunkBits;
   destPos_dbuf = destPos_off + BLOCKS*WARPS_BLOCK*sizeof(int) / sizeof(data_t);
+  std::cout << "Off position: " << destPos_off << std::endl;
+  std::cout << "Dbuf position: " << destPos_dbuf << std::endl;
 
   // currently we only support copying to host
   if(m_iDevice >= 0 && chunks.DeviceID() < 0){
@@ -1049,6 +1051,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
     // copy dbuf to host chunk
     int* offs = (int*)(chunks.m_pChunks->BufferPtr()+destPos_off);  // length of a subchunk after compression
     for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
+      std::cout << "Off: " << offs[i] << std::endl;
       int offset, start = 0;
       if (i > 0) start = chunks.m_pCut->Get(i-1);
       offset = ((start+1)/2*17);
@@ -2741,6 +2744,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   int chunkBits;
   double ret = 0.0;
   int noDataExchange = 0;
+
+  if (num_qubits_ <= 1) return ret;
 
 #ifdef AER_DEBUG
   DebugMsg(func.Name(),qubits);
