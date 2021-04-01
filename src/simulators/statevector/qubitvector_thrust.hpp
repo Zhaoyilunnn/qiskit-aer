@@ -1066,10 +1066,13 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 
     std::cout << "Setting off done" << std::endl;
     // copy dbuf to host chunk
-    int* offs = (int*)(chunks.m_pChunks->BufferPtr()+destPos_off);  // length of a subchunk after compression
     for (int i = 0; i < 504; i++) {
-      std::cout << offs[i] << std::endl;
+      std::cout << chunks.m_pOff->Get(i) << std::endl;
     }
+    int* offs = (int*)(chunks.m_pChunks->BufferPtr()+destPos_off);  // length of a subchunk after compression
+//    for (int i = 0; i < 504; i++) {
+//      std::cout << offs[i] << std::endl;
+//    }
     for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
 //      std::cout << "Off: " << offs[i] << std::endl;
       int offset, start = 0;
