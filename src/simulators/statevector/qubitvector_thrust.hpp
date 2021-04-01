@@ -614,9 +614,9 @@ protected:
   QubitVectorBuffer<uint_t>* m_pParams;
 
   // for compression
-  QubitVectorBuffer<int>* m_pOff;
-  QubitVectorBuffer<int>* m_pCut;
-  QubitVectorBuffer<char>* m_pDbuf;
+  QubitVectorDeviceBuffer<int>* m_pOff;
+  QubitVectorDeviceBuffer<int>* m_pCut;
+  QubitVectorDeviceBuffer<char>* m_pDbuf;
   // for compression done
 
   uint_t m_size;
