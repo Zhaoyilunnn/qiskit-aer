@@ -1043,15 +1043,17 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
     for (int i = 0; i < BLOCKS * WARPS_BLOCK; i++) {
       int start = 0;
       if(i > 0) start = chunks.m_pCut->Get(i-1);
+      std::cout << "start: " << start << std::endl;
       int off = chunks.m_pOff->Get(i);
+      std::cout << "off: " << off << std::endl;
       chunks.m_pOff->Set(i, off-((start+1)/2*17));
-      memcpy((int*)(chunks.m_pChunks->BufferPtr()+destPos_off), chunks.m_pOff->BufferPtr()+i, sizeof(int));
+      memcpy((int*)(chunks.m_pChunks->BufferPtr()+destPos_off+1), chunks.m_pOff->BufferPtr()+i, sizeof(int));
     }
 
     // copy dbuf to host chunk
     int* offs = (int*)(chunks.m_pChunks->BufferPtr()+destPos_off);  // length of a subchunk after compression
     for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
-      std::cout << "Off: " << offs[i] << std::endl;
+//      std::cout << "Off: " << offs[i] << std::endl;
       int offset, start = 0;
       if (i > 0) start = chunks.m_pCut->Get(i-1);
       offset = ((start+1)/2*17);
