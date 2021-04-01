@@ -661,8 +661,8 @@ public:
     m_pOffsets = NULL;
     m_pParams = NULL;
 
-    m_pOff = NULL;
-    m_pDbuf = NULL;
+    m_pOff = {0};
+    m_pDbuf = {0};
     m_pDbufD = NULL;
     m_pCut = NULL;
     m_pCutD = NULL;
@@ -768,14 +768,17 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
   if(m_pParams){
     delete m_pParams;
   }
-  if (m_pOff) {
-    delete m_pOff;
-  }
+
   if (m_pCut) {
     delete m_pCut;
   }
-  if (m_pDbuf) {
-    delete m_pDbuf;
+  for (int i = 0; i < AER_NUM_STREAM; i++) {
+    if (m_pDbuf[i]) {
+      delete m_pDbuf[i];
+    }
+    if (m_pOff[i]) {
+      delete m_pOff[i];
+    }
   }
   if (m_pDbufD) {
     delete m_pDbufD;
@@ -817,7 +820,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     m_pChunks->Resize(size);
   }
 
-  if (m_pOff == NULL && m_pCut == NULL && m_pDbuf == NULL && m_pDbufD == NULL && m_pCutD == NULL) {
+  if (m_pCut == NULL && m_pDbufD == NULL && m_pCutD == NULL) {
     m_doubles = 2 * (1ull << chunkBits); // number of doubles to compress each time
     m_dimensionality = DIM_COMPRESS;
     if (m_iDevice >= 0) { // allocate buffers on GPU for compression
