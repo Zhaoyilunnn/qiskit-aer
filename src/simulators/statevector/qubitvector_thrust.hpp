@@ -879,10 +879,12 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
         int *offl = m_pOff[i]->BufferPtr();
         if (cudaSuccess != cudaMemcpyToSymbol(offd[i], &offl, sizeof(void *)))
           fprintf(stderr, "copying of m_offl to device failed\n");
+        CudaTest("couldn't allocate offd");
 
         char *dbufl = m_pDbuf[i]->BufferPtr();
         if (cudaSuccess != cudaMemcpyToSymbol(dbufd[i], &dbufl, sizeof(void *)))
           fprintf(stderr, "copying of m_dbufl to device failed\n");
+        CudaTest("couldn't allocate dbufd");
       }
 //#endif
     } else { // allocate buffers on CPU for compression
