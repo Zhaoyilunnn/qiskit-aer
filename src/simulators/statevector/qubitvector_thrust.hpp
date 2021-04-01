@@ -404,52 +404,11 @@ class QubitVectorDeviceBuffer : public QubitVectorBuffer<data_t>
 {
 protected:
   AERDeviceVector<data_t> m_Buffer;
-  AERDeviceVector<int> m_offl;
-  AERDeviceVector<int> m_cutl;
-  AERDeviceVector<char> m_dbufl;
 
 public:
-  QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size), m_offl(BLOCKS*WARPS_BLOCK), m_cutl(BLOCKS*WARPS_BLOCK)
+  QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size)
   {
-    int doubles = 2 * size / AER_MAX_GPU_BUFFERS;
-    std::cout << "Num doubles to be compress: " << doubles << std::endl;
-    m_dbufl.resize((doubles+1)/2*17);
-
-    char* dbufl = thrust::raw_pointer_cast(m_dbufl.data());
-    int blocks = 28, warpsperblock = 18, dimensionality = 2;
-    cudaGetLastError();  // reset error value
-
-    // calculate required padding for last chunk
-    // In our implementation, since chunk size is always times of 32, we won't worry about padding
-    // determine chunk assignments per warp
-    thrust::host_vector<int> cuts(BLOCKS*WARPS_BLOCK);
-    int per = (doubles + blocks * warpsperblock - 1) / (blocks * warpsperblock);
-    if (per < WARPSIZE) per = WARPSIZE;
-    per = (per + WARPSIZE - 1) & -WARPSIZE;
-    int curr = 0, before = 0, d = 0;
-    for (int i = 0; i < blocks * warpsperblock; i++) {
-      curr += per;
-      cuts[i] = min(curr, doubles);
-      if (cuts[i] - before > 0) {
-        d = cuts[i] - before;
-      }
-      before = cuts[i];
-    }
-    m_cutl = cuts; // copy cuts from host to device
-    std::cout << "finish chunk assignments" << std::endl;
-
-    // copy buffer starting addresses (pointers) and values to constant memory
-    if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
-      fprintf(stderr, "copying of dimensionality to device failed\n");
-    if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
-      fprintf(stderr, "copying of m_dbufl to device failed\n");
-
-    auto m_cutl_address = thrust::raw_pointer_cast(m_cutl.data());
-    if (cudaSuccess != cudaMemcpyToSymbol(cutd, &m_cutl_address, sizeof(void *)))
-      fprintf(stderr, "copying of m_cutl to device failed\n");
-    auto offl_adress = thrust::raw_pointer_cast(m_offl.data());
-    if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl_adress, sizeof(void *)))
-      fprintf(stderr, "copying of m_offl to device failed\n");
+    ;
   }
 
   AERDeviceVector<data_t>& Buffer(void)
@@ -654,6 +613,12 @@ protected:
   QubitVectorBuffer<uint_t>* m_pOffsets;
   QubitVectorBuffer<uint_t>* m_pParams;
 
+  // for compression
+  QubitVectorBuffer<int>* m_pOff;
+  QubitVectorBuffer<int>* m_pCut;
+  QubitVectorBuffer<char>* m_pDbuf;
+  // for compression done
+
   uint_t m_size;
   uint_t m_bufferSize;
 
@@ -768,6 +733,15 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
   if(m_pParams){
     delete m_pParams;
   }
+  if (m_pOff) {
+    delete m_pOff;
+  }
+  if (m_pCut) {
+    delete m_pCut;
+  }
+  if (m_pDbuf) {
+    delete m_pDbuf;
+  }
 }
 
 //allocate buffer for chunks
@@ -799,6 +773,57 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     }
     m_pChunks->Resize(size);
   }
+
+  if (m_pOff == NULL && m_pCut == NULL && m_pDbuf == NULL) {
+#ifdef AER_THRUST_CUDA
+    if (m_iDevice >= 0) {
+      cudaSetDevice(m_iDevice);
+
+      std::cout << "Start allocating buffers for compression ..." << std::endl;
+
+      m_pOff = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
+      m_pCut = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
+      int doubles = 2 * size / AER_MAX_GPU_BUFFERS; // number of doubles to compress each time
+      int dimensionality = DIM_COMPRESS;
+      m_pDbuf = new QubitVectorDeviceBuffer<char>((doubles+1)/2*17);
+
+      // calculate required padding for last chunk
+      // In our implementation, since chunk size is always times of 32, we won't worry about padding
+      // determine chunk assignments per warp
+      thrust::host_vector<int> cuts(BLOCKS*WARPS_BLOCK);
+      int per = (doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
+      if (per < WARPSIZE) per = WARPSIZE;
+      per = (per + WARPSIZE - 1) & -WARPSIZE;
+      int curr = 0, before = 0, d = 0;
+      for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
+        curr += per;
+        cuts[i] = min(curr, doubles);
+        if (cuts[i] - before > 0) {
+          d = cuts[i] - before;
+        }
+        before = cuts[i];
+      }
+      m_cutl = cuts; // copy cuts from host to device
+      std::cout << "finish chunk assignments" << std::endl;
+
+      // copy buffer starting addresses (pointers) and values to constant memory
+      if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
+        fprintf(stderr, "copying of dimensionality to device failed\n");
+
+      char* dbufl = thrust::raw_pointer_cast(m_pDbuf->m_Buffer.data());
+      if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
+        fprintf(stderr, "copying of m_dbufl to device failed\n");
+
+      int* cutl = thrust::raw_pointer_cast(m_pCut->m_Buffer.data());
+      if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
+        fprintf(stderr, "copying of m_cutl to device failed\n");
+      int* offl = thrust::raw_pointer_cast(m_pOff->m_Buffer.data());
+      if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
+        fprintf(stderr, "copying of m_offl to device failed\n");
+    }
+#endif
+  }
+
   return 0;
 }
 
@@ -878,13 +903,10 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
-  std::cout << "size before compression " << size << std::endl;
-  std::cout << "srcPos before compression " << srcPos << std::endl;
-  if (size >= 32) // temporally set this
+  if (size >= 32) {// temporally set this
     size = m_pChunks->Compress(srcPos, size, stream);
-  std::cout << "size after compression " << size << std::endl;
-  std::cout << "srcPos after compression " << srcPos << std::endl;
-  std::cout << "Compression done" << std::endl;
+    std::cout << "Compression done" << std::endl;
+  }
   return size;
 }
 
