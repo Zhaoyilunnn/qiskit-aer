@@ -1047,7 +1047,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
       int off = chunks.m_pOff->Get(i);
       std::cout << "off: " << off << std::endl;
       chunks.m_pOff->Set(i, off-((start+1)/2*17));
-      memcpy((int*)(chunks.m_pChunks->BufferPtr()+destPos_off+1), chunks.m_pOff->BufferPtr()+i, sizeof(int));
+      memcpy((int*)(chunks.m_pChunks->BufferPtr()+destPos_off+i), chunks.m_pOff->BufferPtr()+i, sizeof(int));
     }
 
     // copy dbuf to host chunk
