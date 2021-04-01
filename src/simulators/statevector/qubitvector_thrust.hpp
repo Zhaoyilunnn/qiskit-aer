@@ -880,7 +880,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       m_pDbufH = new QubitVectorHostBuffer<char>((doubles+1)/2*17);
       m_pOffH = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
 
-      std::cout << "Allocating buffers on CPU for compression ..." std::endl;
+      std::cout << "Allocating buffers on CPU for compression ..." << std::endl;
     }
   }
 
