@@ -997,7 +997,7 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
 }
 
 template <typename data_t>
-int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer<data_t> &chunks, uint_t src,
+int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer &chunks, uint_t src,
                                                      int chunkBits, cudaStream_t stream)
 {
 //  uint_t srcPos_off, srcPos_dbuf, size_off, size_dbuf;
@@ -1021,7 +1021,7 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer<d
 }
 
 template <typename data_t>
-int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer<data_t> &chunks, uint_t dest,
+int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,
                                                      int chunkBits, cudaStream_t stream)
 {
   uint_t destPos_off, destPos_dbuf;
@@ -1045,15 +1045,15 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer<d
     }
 
     // copy dbuf to host chunk
-    int* offs = (int*)(chunks.m_pChunks->BufferPtr()+destPos_off);  // length of a subchunk after compression
-    for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
-      int offset, start = 0;
-      if (i > 0) start = chunks.m_pCut->Get(i-1);
-      offset = ((start+1)/2*17);
-      cudaMemcpyAsync(chunks.m_pChunks->BufferPtr()+destPos_dbuf+offset,
-                      m_pDbuf->BufferPtr()+offset, sizeof(char)*offs[i],
-                      cudaMemcpyDeviceToHost, stream);
-    }
+//    int* offs = (int*)(chunks.m_pChunks->BufferPtr()+destPos_off);  // length of a subchunk after compression
+//    for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
+//      int offset, start = 0;
+//      if (i > 0) start = chunks.m_pCut->Get(i-1);
+//      offset = ((start+1)/2*17);
+//      cudaMemcpyAsync(chunks.m_pChunks->BufferPtr()+destPos_dbuf+offset,
+//                      m_pDbuf->BufferPtr()+offset, sizeof(char)*offs[i],
+//                      cudaMemcpyDeviceToHost, stream);
+//    }
     std::cout << "Copying back done" << std::endl;
   }
 
@@ -2549,7 +2549,7 @@ std::complex<double> QubitVectorThrust<data_t>::inner_product() const
 template <typename data_t>
 void QubitVectorThrust<data_t>::initialize()
 {
-//  zero();
+  zero();
 
   thrust::complex<data_t> t;
   t = 1.0;
