@@ -702,7 +702,7 @@ public:
     return m_size;
   }
 
-  int Allocate(uint_t size,uint_t bufferSize = 0);
+  int Allocate(uint_t size,uint_t bufferSize = 0, int chunkBits=21);
   int AllocateParameters(int bits);
 
   // Compression and decompression
@@ -779,7 +779,7 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
 
 //allocate buffer for chunks
 template <typename data_t>
-int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize)
+int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize,int chunkBits)
 {
   uint_t size = size_in + bufferSize;
   m_size = size_in;
@@ -809,7 +809,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 
   if (m_pOff == NULL && m_pCut == NULL && m_pDbuf == NULL
   && m_pDbufD == NULL && m_pCutD == NULL && m_pDbufH == NULL && m_pOffH == NULL) {
-    m_doubles = 2 * size / AER_MAX_GPU_BUFFERS; // number of doubles to compress each time
+    m_doubles = 2 * (1ull << chunkBits); // number of doubles to compress each time
     m_dimensionality = DIM_COMPRESS;
     if (m_iDevice >= 0) { // allocate buffers on GPU for compression
 #ifdef AER_THRUST_CUDA
@@ -2342,7 +2342,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
 
     m_Chunks[m_iPlaceHost].SetGlobalIndex(m_globalIndex + (is << m_maxChunkBits));
     m_Chunks[m_iPlaceHost].SetDevice(-1);
-    m_Chunks[m_iPlaceHost].Allocate(m_localSize - (is << m_maxChunkBits),numBuffers << m_maxChunkBits);
+    m_Chunks[m_iPlaceHost].Allocate(m_localSize - (is << m_maxChunkBits),numBuffers << m_maxChunkBits, m_maxChunkBits);
     m_Chunks[m_iPlaceHost].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
     m_Chunks[m_iPlaceHost].SetupP2P(m_nDevParallel);
 
@@ -2360,7 +2360,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
 #else
     m_Chunks[i].SetDevice(-1);
 #endif
-    m_Chunks[i].Allocate(0, num_buffers_device << m_maxChunkBits);
+    m_Chunks[i].Allocate(0, num_buffers_device << m_maxChunkBits, m_maxChunkBits);
     m_Chunks[i].AllocateParameters(AER_DEFAULT_MATRIX_BITS);
     m_Chunks[i].SetupP2P(m_nDevParallel);
   }
