@@ -807,8 +807,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     m_pChunks->Resize(size);
   }
 
-  if (m_pOff == NULL && m_pCut == NULL && m_pDbuf == NULL
-  && m_pDbufD == NULL && m_pCutD == NULL && m_pDbufH == NULL && m_pOffH == NULL) {
+  if (m_pOff == NULL && m_pCut == NULL && m_pDbuf == NULL && m_pDbufD == NULL && m_pCutD == NULL) {
     m_doubles = 2 * (1ull << chunkBits); // number of doubles to compress each time
     m_dimensionality = DIM_COMPRESS;
     if (m_iDevice >= 0) { // allocate buffers on GPU for compression
