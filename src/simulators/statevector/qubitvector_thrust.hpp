@@ -856,7 +856,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       std::cout << "finish chunk assignments" << std::endl;
 
       // copy buffer starting addresses (pointers) and values to constant memory
-      if (cudaSuccess != cudaMemcpyToSymbol(m_dimensionalityd, &m_dimensionality, sizeof(int)))
+      if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &m_dimensionality, sizeof(int)))
         fprintf(stderr, "copying of m_dimensionality to device failed\n");
 
       char* dbufl = m_pDbuf->BufferPtr();
