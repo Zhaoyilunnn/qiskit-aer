@@ -554,6 +554,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
   return out_size;
 }
 
+template <typename data_t>
 void QubitVectorDeviceBuffer<data_t>::Decompress(uint_t pos, uint_t size, cudaStream_t stream)
 {
   ;
@@ -925,7 +926,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
 }
 
 template <typename data_t>
-void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, int nChunks, int stream)
+void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream)
 {
   uint_t srcPos, size;
   srcPos = m_size + (bufSrc << chunkBits);
