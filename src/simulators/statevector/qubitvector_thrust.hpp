@@ -1042,8 +1042,9 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
   if(m_iDevice >= 0 && chunks.DeviceID() < 0){
     std::cout << "Start copying compressed data" << std::endl;
     // copy off to host off
-    cudaMemcpy(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int),
-                    cudaMemcpyDeviceToHost, stream);
+//    cudaMemcpyAsync(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int),
+//                    cudaMemcpyDeviceToHost, stream);
+    cudaMemcpy(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int), cudaMemcpyDeviceToHost);
     for (int i = 0; i < 504; i++) {
       std::cout << chunks.m_pOff->Get(i) << std::endl;
     }
