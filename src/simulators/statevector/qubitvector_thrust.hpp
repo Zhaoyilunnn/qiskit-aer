@@ -1043,13 +1043,13 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer<d
     }
 
     // copy dbuf to host chunk
-    int* offs = (int*)(chunks.m_pChunks->BufferPtr()+destPos_off);
+    int* offs = (int*)(chunks.m_pChunks->BufferPtr()+destPos_off);  // length of a subchunk after compression
     for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
       int offset, start = 0;
       if (i > 0) start = chunks.m_pCut->Get(i-1);
       offset = ((start+1)/2*17);
       cudaMemcpyAsync(chunks.m_pChunks->BufferPtr()+destPos_dbuf+offset,
-                      m_pDbuf->BufferPtr()+offset, sizeof(char)*off[i],
+                      m_pDbuf->BufferPtr()+offset, sizeof(char)*offs[i],
                       cudaMemcpyDeviceToHost, stream);
     }
     std::cout << "Copying back done" << std::endl;
