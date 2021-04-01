@@ -873,7 +873,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
         fprintf(stderr, "copying of m_offl to device failed\n");
 #endif
     } else { // allocate buffers on CPU for compression
-      cudaSetDevice(m_iDevice);
+      std::cout << "Allocating buffers on CPU for compression ..." << std::endl;
 
       m_pOff = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
       m_pCut = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
@@ -894,7 +894,6 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       }
       m_pCut->Copy(cuts);
 
-      std::cout << "Allocating buffers on CPU for compression ..." << std::endl;
     }
   }
 
