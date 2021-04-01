@@ -411,7 +411,7 @@ protected:
 public:
   QubitVectorDeviceBuffer(uint_t size) : m_Buffer(size)
   {
-    ;
+    std::cout << "Buffer size: " << m_Buffer.size() << std::endl;
   }
 
   AERDeviceVector<data_t>& Buffer(void)
@@ -532,7 +532,8 @@ template <typename data_t>
 uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaStream_t stream)
 {
   uint_t out_size = size;
-  ull *cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data() + size)); // uncompressed data
+//  ull *cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data() + size)); // uncompressed data
+  ull *cbufl = reinterpret_cast<ull*>(BufferPtr()+size); // uncompressed data
 
 //    for (int cc = 0; cc < 10; cc++) {
 //      std::cout << m_Buffer[cc] << std::endl;
