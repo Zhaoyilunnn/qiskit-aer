@@ -422,18 +422,20 @@ public:
     // calculate required padding for last chunk
     // In our implementation, since chunk size is always times of 32, we won't worry about padding
     // determine chunk assignments per warp
+    thrust::host_vector<int> cuts(BLOCKS*WARPS_BLOCK);
     int per = (doubles + blocks * warpsperblock - 1) / (blocks * warpsperblock);
     if (per < WARPSIZE) per = WARPSIZE;
     per = (per + WARPSIZE - 1) & -WARPSIZE;
     int curr = 0, before = 0, d = 0;
     for (int i = 0; i < blocks * warpsperblock; i++) {
       curr += per;
-      m_cutl[i] = min(curr, doubles);
-      if (m_cutl[i] - before > 0) {
-        d = m_cutl[i] - before;
+      cuts[i] = min(curr, doubles);
+      if (cuts[i] - before > 0) {
+        d = cuts[i] - before;
       }
-      before = m_cutl[i];
+      before = cuts[i];
     }
+    m_cutl = cuts; // copy cuts from host to device
     std::cout << "finish chunk assignments" << std::endl;
 
     // copy buffer starting addresses (pointers) and values to constant memory
