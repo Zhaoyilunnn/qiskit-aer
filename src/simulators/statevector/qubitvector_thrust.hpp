@@ -1024,13 +1024,13 @@ template <typename data_t>
 int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer<data_t> &chunks, uint_t dest,
                                                      int chunkBits, cudaStream_t stream)
 {
-  uint_t destPos_off, destPos_dbuf,size_off,size_dbuf;
+  uint_t destPos_off, destPos_dbuf;
   destPos_off = dest << chunkBits;
   destPos_dbuf = destPos_off + BLOCKS*WARPS_BLOCK*sizeof(int) / sizeof(data_t);
 
   // currently we only support copying to host
   if(m_iDevice >= 0 && chunks.DeviceID() < 0){
-
+    std::cout << "Start copying compressed data" << std::endl;
     // copy off to host off
     cudaMemcpyAsync(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int),
                     cudaMemcpyDeviceToHost, stream);
@@ -2549,7 +2549,7 @@ std::complex<double> QubitVectorThrust<data_t>::inner_product() const
 template <typename data_t>
 void QubitVectorThrust<data_t>::initialize()
 {
-  zero();
+//  zero();
 
   thrust::complex<data_t> t;
   t = 1.0;
