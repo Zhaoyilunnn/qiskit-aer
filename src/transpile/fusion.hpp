@@ -466,9 +466,9 @@ void Fusion::optimize_circuit(Circuit& circ,
   // first reorder circuit
   std::cout << "Order before reorder" << std::endl;
   print_order(circ);
-  reorder_circuit(circ);
-  std::cout << "Order after reorder" << std::endl;
-  print_order(circ);
+//  reorder_circuit(circ);
+//  std::cout << "Order after reorder" << std::endl;
+//  print_order(circ);
 
   // Start timer
   using clock_t = std::chrono::high_resolution_clock;
@@ -553,8 +553,10 @@ void Fusion::optimize_circuit(Circuit& circ,
   }
 
   // reorder after fusion
-//  reorder_circuit(circ);
-  std::cout << "Order after fusion" << std::endl;
+  std::cout << "Order before reorder" << std::endl;
+  print_order(circ);
+  reorder_circuit(circ);
+  std::cout << "Order after reorder" << std::endl;
   print_order(circ);
 }
 
