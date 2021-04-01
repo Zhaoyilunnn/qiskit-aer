@@ -634,6 +634,9 @@ protected:
   // Host
   QubitVectorBuffer<char>* m_pDbufH;  // for preprocessing of decompression
   QubitVectorBuffer<int>* m_pOffH;    // for preprocessing of decompression
+
+  int m_doubles;                      // number of doubles for compression
+  int m_dimensionality;               // dimension
   //===== for compression done =====
 
   uint_t m_size;
@@ -711,6 +714,8 @@ public:
   // Compression and decompression
   uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream);
   void Decompression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream);
+
+  int PutCompressed(QubitVectorChunkContainer& chunks, uint_t dest, int chunkBits, cudaStream_t stream);
   // Compression and decompression done
 
   int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks, cudaStream_t stream);
@@ -816,8 +821,8 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 
   if (m_pOff == NULL && m_pCut == NULL && m_pDbuf == NULL
   && m_pDbufD == NULL && m_pCutD == NULL && m_pDbufH == NULL && m_pOffH == NULL) {
-    int doubles = 2 * size / AER_MAX_GPU_BUFFERS; // number of doubles to compress each time
-    int dimensionality = DIM_COMPRESS;
+    m_doubles = 2 * size / AER_MAX_GPU_BUFFERS; // number of doubles to compress each time
+    m_dimensionality = DIM_COMPRESS;
     if (m_iDevice >= 0) { // allocate buffers on GPU for compression
 #ifdef AER_THRUST_CUDA
       cudaSetDevice(m_iDevice);
@@ -827,21 +832,21 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       m_pOff = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
       m_pCut = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
       m_pCutD = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
-      m_pDbuf = new QubitVectorDeviceBuffer<char>((doubles+1)/2*17);
-      m_pDbufD = new QubitVectorDeviceBuffer<char>((doubles+1)/2*17);
+      m_pDbuf = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
+      m_pDbufD = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
 
 
       // calculate required padding for last chunk
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
       // determine chunk assignments per warp
       std::vector<int> cuts(BLOCKS*WARPS_BLOCK);
-      int per = (doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
+      int per = (m_doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
       if (per < WARPSIZE) per = WARPSIZE;
       per = (per + WARPSIZE - 1) & -WARPSIZE;
       int curr = 0, before = 0, d = 0;
       for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
         curr += per;
-        cuts[i] = min(curr, doubles);
+        cuts[i] = min(curr, m_doubles);
         if (cuts[i] - before > 0) {
           d = cuts[i] - before;
         }
@@ -851,8 +856,8 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       std::cout << "finish chunk assignments" << std::endl;
 
       // copy buffer starting addresses (pointers) and values to constant memory
-      if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
-        fprintf(stderr, "copying of dimensionality to device failed\n");
+      if (cudaSuccess != cudaMemcpyToSymbol(m_dimensionalityd, &m_dimensionality, sizeof(int)))
+        fprintf(stderr, "copying of m_dimensionality to device failed\n");
 
       char* dbufl = m_pDbuf->BufferPtr();
       if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
@@ -877,7 +882,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     } else { // allocate buffers on CPU for compression
       cudaSetDevice(m_iDevice);
 
-      m_pDbufH = new QubitVectorHostBuffer<char>((doubles+1)/2*17);
+      m_pDbufH = new QubitVectorHostBuffer<char>((m_doubles+1)/2*17);
       m_pOffH = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
 
       std::cout << "Allocating buffers on CPU for compression ..." << std::endl;
@@ -981,6 +986,31 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
     m_pChunks->Decompress(srcPos, size, stream);
     std::cout << "Decompression done" << std::endl;
   }
+}
+
+template <typename data_t>
+int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer<data_t> &chunks, uint_t dest,
+                                                     int chunkBits, cudaStream_t stream)
+{
+  uint_t destPos_off, destPos_dbuf,size_off,size_dbuf;
+  destPos_off = dest << chunkBits;
+  destPos_dbuf = destPos_off + BLOCKS*WARPS_BLOCK*sizeof(int) / sizeof(data_t);
+  size = (1ull << chunkBits) * nChunks;
+
+  // currently we only support copying to host
+  if(m_iDevice >=0 && chunks.DeviceID() < 0){
+    // copy off to host chunk
+    cudaMemcpyAsync(chunks.m_pChunks->BufferPtr()+destPos_off,
+                    m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int),
+                    cudaMemcpyDeviceToHost, stream);
+    // copy dbuf to host chunk
+    cudaMemcpyAsync(chunks.m_pChunks->BufferPtr()+destPos_dbuf,
+                    m_pDbuf->BufferPtr(), (m_doubles+1)/2*17*sizeof(char),
+                    cudaMemcpyDeviceToHost, stream);
+    std::cout << "Copying back done" << std::endl;
+  }
+
+  return 0;
 }
 
 //copy chunk from other container to buffer
