@@ -95,9 +95,11 @@ double mysecond()
 
 __device__ __constant__ int dimensionalityd; // dimensionality parameter
 __device__ __constant__ ull *cbufd; // ptr to uncompressed data
-__device__ __constant__ unsigned char *dbufd; // ptr to compressed data
+__device__ __constant__ unsigned char *dbufd; // ptr to compressed data for compression
+__device__ __constant__ unsigned char *dbufdd; // ptr to compressed data for decompression
 __device__ __constant__ ull *fbufd; // ptr to decompressed data
-__device__ __constant__ int *cutd; // ptr to chunk boundaries
+__device__ __constant__ int *cutd; // ptr to chunk boundaries for compression
+__device__ __constant__ int *cutdd; // ptr to chunk boundaries for decompression
 __device__ __constant__ int *offd; // ptr to chunk offsets after compression
 
 
@@ -554,6 +556,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
   return out_size;
 }
 
+template <typename data_t>
 void QubitVectorDeviceBuffer<data_t>::Decompress(uint_t pos, uint_t size, cudaStream_t stream)
 {
   ;
@@ -623,8 +626,10 @@ protected:
 
   // for compression
   QubitVectorBuffer<int>* m_pOff;
-  QubitVectorBuffer<int>* m_pCut;
-  QubitVectorBuffer<char>* m_pDbuf;
+  QubitVectorBuffer<int>* m_pCut;   // for compression
+  QubitVectorBuffer<int>* m_pCutD;  // for decompression
+  QubitVectorBuffer<char>* m_pDbuf; // for compression
+  QubitVectorBuffer<char>* m_pDbufD;// for decompression
   // for compression done
 
   uint_t m_size;
