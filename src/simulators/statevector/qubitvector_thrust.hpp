@@ -132,7 +132,7 @@ __global__ void CompressionKernel(int iStream)
   for (int i = start + lane; i < term; i += WARPSIZE) {
     // calculate delta between value to compress and prediction
     // and negate if negative
-    diff = cbufd[i] - prev;
+    diff = cbufd[iStream][i] - prev;
     code = (diff >> 60) & 8;
     if (code != 0) {
       diff = -diff;
@@ -179,7 +179,7 @@ __global__ void CompressionKernel(int iStream)
 
     // save prediction value from this subchunk (based on provided dimensionality)
     // for use in next subchunk
-    prev = cbufd[i + offset];
+    prev = cbufd[iStream][i + offset];
   }
 
   // save final value of off, which is total bytes of compressed output for this chunk
@@ -539,7 +539,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
 //      std::cout << m_Buffer[cc] << std::endl;
 //    }
 
-  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd, &cbufl, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
+  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd[iStream], &cbufl, sizeof(void *), 0, cudaMemcpyHostToDevice, stream))
     fprintf(stderr, "copying of cbufl to device failed\n");
 
   CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(iStream);
