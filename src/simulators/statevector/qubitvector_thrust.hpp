@@ -543,6 +543,7 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
     fprintf(stderr, "copying of cbufl to device failed\n");
 
   CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>();
+  CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
 //  int sum_byte_compressed = 0;
 //  // output m_offlset table
