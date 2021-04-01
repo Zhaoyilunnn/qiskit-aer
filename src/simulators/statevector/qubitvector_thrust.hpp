@@ -803,21 +803,21 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
         }
         before = cuts[i];
       }
-      m_pCut->m_Buffer = cuts; // copy cuts from host to device
+      m_pCut->Buffer() = cuts; // copy cuts from host to device
       std::cout << "finish chunk assignments" << std::endl;
 
       // copy buffer starting addresses (pointers) and values to constant memory
       if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
         fprintf(stderr, "copying of dimensionality to device failed\n");
 
-      char* dbufl = thrust::raw_pointer_cast(m_pDbuf->m_Buffer.data());
+      char* dbufl = thrust::raw_pointer_cast(m_pDbuf->Buffer().data());
       if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
         fprintf(stderr, "copying of m_dbufl to device failed\n");
 
-      int* cutl = thrust::raw_pointer_cast(m_pCut->m_Buffer.data());
+      int* cutl = thrust::raw_pointer_cast(m_pCut->Buffer().data());
       if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
         fprintf(stderr, "copying of m_cutl to device failed\n");
-      int* offl = thrust::raw_pointer_cast(m_pOff->m_Buffer.data());
+      int* offl = thrust::raw_pointer_cast(m_pOff->Buffer().data());
       if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
         fprintf(stderr, "copying of m_offl to device failed\n");
     }
