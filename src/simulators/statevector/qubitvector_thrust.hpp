@@ -803,7 +803,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
         }
         before = cuts[i];
       }
-      m_cutl = cuts; // copy cuts from host to device
+      m_pCut->m_Buffer = cuts; // copy cuts from host to device
       std::cout << "finish chunk assignments" << std::endl;
 
       // copy buffer starting addresses (pointers) and values to constant memory
