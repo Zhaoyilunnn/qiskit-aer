@@ -796,10 +796,12 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     if(m_iDevice >= 0){
       cudaSetDevice(m_iDevice);
       m_pChunks = new QubitVectorDeviceBuffer<thrust::complex<data_t>>(size);
+      std::cout << "Allocated device size: " << size << std::endl;
     }
     else{
 #endif
       m_pChunks = new QubitVectorHostBuffer<thrust::complex<data_t>>(size);
+      std::cout << "Allocated host size: " << size << std::endl;
 #ifdef AER_THRUST_CUDA
     }
 #endif
