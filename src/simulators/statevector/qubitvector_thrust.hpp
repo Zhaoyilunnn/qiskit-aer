@@ -991,7 +991,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
 
   // Compression before copying back to CPU
   if (size >= 32) {// temporally set this TODO: fix this
-    size = m_pChunks->Compress(srcPos, size, stream, int iStream);
+    size = m_pChunks->Compress(srcPos, size, stream, iStream);
     std::cout << "Compression done" << std::endl;
 //    for (int i = 0; i < 504; i++) {
 //      int off = m_pOff->Get(i);
