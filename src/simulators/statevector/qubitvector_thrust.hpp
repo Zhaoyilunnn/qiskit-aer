@@ -930,7 +930,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
 }
 
 template <typename data_t>
-void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, int nChunks, int stream)
+void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream)
 {
   uint_t srcPos, size;
   srcPos = m_size + (bufSrc << chunkBits);
