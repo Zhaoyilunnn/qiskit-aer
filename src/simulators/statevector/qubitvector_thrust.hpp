@@ -224,15 +224,15 @@ __global__ void DecompressionKernel()
 
   // determine start and end of chunk to decompress
   start = 0;
-  if (warp > 0) start = cutd[warp-1];
-  term = cutd[warp];
+  if (warp > 0) start = cutdd[warp-1];
+  term = cutdd[warp];
   off = ((start+1)/2*17);
 
   prev = 0;
   for (int i = start + lane; i < term; i += WARPSIZE) {
     // read in half-bytes of size and leading-zero count information
     if ((lane & 1) == 0) {
-      code = dbufd[off + (lane >> 1)];
+      code = dbufdd[off + (lane >> 1)];
       ibufs[iindex] = code;
       ibufs[iindex + 1] = code >> 4;
     }
@@ -264,7 +264,7 @@ __global__ void DecompressionKernel()
     diff = 0;
     for (; beg <= end; end--) {
       diff <<= 8;
-      diff |= dbufd[end];
+      diff |= dbufdd[end];
     }
 
     // negate delta if sign bit indicates it was negated during compression
@@ -624,13 +624,17 @@ protected:
   QubitVectorBuffer<uint_t>* m_pOffsets;
   QubitVectorBuffer<uint_t>* m_pParams;
 
-  // for compression
+  //===== for compression =====
+  // Device
   QubitVectorBuffer<int>* m_pOff;
-  QubitVectorBuffer<int>* m_pCut;   // for compression
-  QubitVectorBuffer<int>* m_pCutD;  // for decompression
-  QubitVectorBuffer<char>* m_pDbuf; // for compression
-  QubitVectorBuffer<char>* m_pDbufD;// for decompression
-  // for compression done
+  QubitVectorBuffer<int>* m_pCut;     // for compression
+  QubitVectorBuffer<int>* m_pCutD;    // for decompression
+  QubitVectorBuffer<char>* m_pDbuf;   // for compression
+  QubitVectorBuffer<char>* m_pDbufD;  // for decompression
+  // Host
+  QubitVectorBuffer<char>* m_pDbufH;  // for preprocessing of decompression
+  QubitVectorBuffer<int>* m_pOffH;    // for preprocessing of decompression
+  //===== for compression done =====
 
   uint_t m_size;
   uint_t m_bufferSize;
@@ -654,6 +658,9 @@ public:
     m_pDbufD = NULL;
     m_pCut = NULL;
     m_pCutD = NULL;
+
+    m_pDbufH = NULL;
+    m_pOffH = NULL;
 
     m_size = 0;
     m_bufferSize = 0;
@@ -769,6 +776,12 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
   if (m_pCutD) {
     delete m_pCutD;
   }
+  if (m_pDbufH) {
+    delete m_pDbufH;
+  }
+  if (m_pOffH) {
+    delete m_pOffH;
+  }
 }
 
 //allocate buffer for chunks
@@ -801,18 +814,22 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     m_pChunks->Resize(size);
   }
 
-  if (m_pOff == NULL && m_pCut == NULL && m_pDbuf == NULL) {
+  if (m_pOff == NULL && m_pCut == NULL && m_pDbuf == NULL
+  && m_pDbufD == NULL && m_pCutD == NULL && m_pDbufH == NULL && m_pOffH == NULL) {
+    int doubles = 2 * size / AER_MAX_GPU_BUFFERS; // number of doubles to compress each time
+    int dimensionality = DIM_COMPRESS;
+    if (m_iDevice >= 0) { // allocate buffers on GPU for compression
 #ifdef AER_THRUST_CUDA
-    if (m_iDevice >= 0) {
       cudaSetDevice(m_iDevice);
 
-      std::cout << "Start allocating buffers for compression ..." << std::endl;
+      std::cout << "Allocating buffers on GPU for compression ..." << std::endl;
 
       m_pOff = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
       m_pCut = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
-      int doubles = 2 * size / AER_MAX_GPU_BUFFERS; // number of doubles to compress each time
-      int dimensionality = DIM_COMPRESS;
+      m_pCutD = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
       m_pDbuf = new QubitVectorDeviceBuffer<char>((doubles+1)/2*17);
+      m_pDbufD = new QubitVectorDeviceBuffer<char>((doubles+1)/2*17);
+
 
       // calculate required padding for last chunk
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
@@ -841,14 +858,30 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
         fprintf(stderr, "copying of m_dbufl to device failed\n");
 
+      char* dbufld = m_pDbufD->BufferPtr();
+      if (cudaSuccess != cudaMemcpyToSymbol(dbufdd, &dbufld, sizeof(void *)))
+        fprintf(stderr, "copying of m_dbufl to device failed\n");
+
       int* cutl = m_pCut->BufferPtr();
       if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
         fprintf(stderr, "copying of m_cutl to device failed\n");
+
+      int* cutld = m_pCutD->BufferPtr();
+      if (cudaSuccess != cudaMemcpyToSymbol(cutdd, &cutld, sizeof(void *)))
+        fprintf(stderr, "copying of m_cutl to device failed\n");
+
       int* offl = m_pOff->BufferPtr();
       if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
         fprintf(stderr, "copying of m_offl to device failed\n");
-    }
 #endif
+    } else { // allocate buffers on CPU for compression
+      cudaSetDevice(iDevice);
+
+      m_pDbufH = new QubitVectorHostBuffer<char>((doubles+1)/2*17);
+      m_pOffH = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
+
+      std::cout << "Allocating buffers on CPU for compression ..." std::endl;
+    }
   }
 
   return 0;
