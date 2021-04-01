@@ -614,9 +614,9 @@ protected:
   QubitVectorBuffer<uint_t>* m_pParams;
 
   // for compression
-  QubitVectorDeviceBuffer<int>* m_pOff;
-  QubitVectorDeviceBuffer<int>* m_pCut;
-  QubitVectorDeviceBuffer<char>* m_pDbuf;
+  QubitVectorBuffer<int>* m_pOff;
+  QubitVectorBuffer<int>* m_pCut;
+  QubitVectorBuffer<char>* m_pDbuf;
   // for compression done
 
   uint_t m_size;
@@ -790,7 +790,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       // calculate required padding for last chunk
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
       // determine chunk assignments per warp
-      thrust::host_vector<int> cuts(BLOCKS*WARPS_BLOCK);
+      std::vector<int> cuts(BLOCKS*WARPS_BLOCK);
       int per = (doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
       if (per < WARPSIZE) per = WARPSIZE;
       per = (per + WARPSIZE - 1) & -WARPSIZE;
@@ -803,21 +803,21 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
         }
         before = cuts[i];
       }
-      m_pCut->Buffer() = cuts; // copy cuts from host to device
+      m_pCut->Copy(cuts); // copy cuts from host to device
       std::cout << "finish chunk assignments" << std::endl;
 
       // copy buffer starting addresses (pointers) and values to constant memory
       if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &dimensionality, sizeof(int)))
         fprintf(stderr, "copying of dimensionality to device failed\n");
 
-      char* dbufl = thrust::raw_pointer_cast(m_pDbuf->Buffer().data());
+      char* dbufl = m_pDbuf->BufferPtr();
       if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, sizeof(void *)))
         fprintf(stderr, "copying of m_dbufl to device failed\n");
 
-      int* cutl = thrust::raw_pointer_cast(m_pCut->Buffer().data());
+      int* cutl = m_pCut->BufferPtr();
       if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
         fprintf(stderr, "copying of m_cutl to device failed\n");
-      int* offl = thrust::raw_pointer_cast(m_pOff->Buffer().data());
+      int* offl = m_pOff->BufferPtr();
       if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, sizeof(void *)))
         fprintf(stderr, "copying of m_offl to device failed\n");
     }
