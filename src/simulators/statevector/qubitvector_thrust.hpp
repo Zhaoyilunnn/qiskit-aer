@@ -108,7 +108,7 @@ __constant__ int warpsblockd = 18;
 
 
 
-__global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd, ull* outsize)
+__global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd)
 {
   int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
@@ -192,7 +192,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   cudaDeviceSynchronize();
 
   if (warp == 0) { // merge compressed data to output
-    *outsize = 0;
+    int offsetc = 0;
     for (int i = 0; i < blocksd*warpsblockd; i++) {
       int offsetd, start = 0;
       if (i > 0) start = cutd[i-1];
@@ -201,10 +201,10 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
       int j = 0;
       uchar* cbufcd = (uchar*)cbufd;
       while (j < offd[i]) {
-        cbufcd[*outsize+j] = dbufd[offsetd+j];
+        cbufcd[offsetc+j] = dbufd[offsetd+j];
         j++;
       }
-      *outsize += offd[i];
+      offsetc += offd[i];
     }
   }
 }
@@ -1058,7 +1058,7 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
 //  if (size >= 32) {// temporally set this TODO: fix this
 //    size = m_pChunks->Compress(srcPos, size, stream, iStream);
   CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
-                                                                 dbuf, cut, off, &res);
+                                                                 dbuf, cut, off);
 //  CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
 
