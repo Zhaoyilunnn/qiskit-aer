@@ -3029,7 +3029,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 //                                     chunkBits, 1, m_Streams[iStream]);
                 m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                                m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
-                                               chunkBits, m_Streams[iStream]);
+                                               chunkBits, m_Streams[iStream], iStream);
               }
               // Switch stream
               iStream = (iStream + 1) % num_streams; // current stream
@@ -3071,7 +3071,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 //                                 chunkBits, 1, m_Streams[iStream]);
             m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                            m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
-                                           chunkBits, m_Streams[iStream]);
+                                           chunkBits, m_Streams[iStream], iStream);
           }
         }
         // Update stream index
