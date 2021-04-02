@@ -193,13 +193,13 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 
   if (warp == 0) { // merge compressed data to output
     int offsetc = 0;
+    uchar* cbufcd = (uchar*)cbufd;
     for (int i = 0; i < blocksd*warpsblockd; i++) {
       int offsetd, start = 0;
       if (i > 0) start = cutd[i-1];
       offsetd = ((start+1)/2*17);
       offd[i] -= offsetd;
       int j = 0;
-      uchar* cbufcd = (uchar*)cbufd;
       while (j < offd[i]) {
         cbufcd[offsetc+j] = dbufd[offsetd+j];
         j++;
