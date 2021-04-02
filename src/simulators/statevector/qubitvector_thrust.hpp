@@ -1060,7 +1060,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
     int start = 0;
     if (i > 0) start = cuth[i-1];
     offh[i] -= ((start+1)/2*17);
-    std::cout << "Off: " << offh[i] << std::endl;
+//    std::cout << "Off: " << offh[i] << std::endl;
     res += offh[i];
     if (i > 0) outOffset[i] += offh[i-1];
   }
@@ -3069,7 +3069,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
                 outSizeACP[i] = m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
-                std::cout << outSizeACP[i] << std::endl;
+//                std::cout << outSizeACP[i] << std::endl;
               }
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
@@ -3117,7 +3117,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
             outSizeACP[i] = m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
-            std::cout << outSizeACP[i] << std::endl;
+//            std::cout << outSizeACP[i] << std::endl;
           }
 
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
