@@ -782,7 +782,7 @@ public:
 
   // Compression and decompression
   uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, cudaStream_t stream);
-  void Decompression(uint_t bufSrc, int chunkBits, int nChunks, ull* fbuf, int* cut, cudaStream_t stream);
+//  void Decompression(uint_t bufSrc, int chunkBits, int nChunks, ull* fbuf, int* cut, cudaStream_t stream);
   int GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, int chunkBits, cudaStream_t stream);
   int PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc, int chunkBits, uint_t size,cudaStream_t stream);
   // Compression and decompression done
@@ -1095,11 +1095,11 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
   return res;
 }
 
-template <typename data_t>
-void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, ull* fbuf, int* cut, int nChunks, cudaStream_t stream)
-{
-  uint_t srcPos, size;
-  srcPos = m_size + (bufSrc << chunkBits);
+//template <typename data_t>
+//void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, ull* fbuf, int* cut, int nChunks, cudaStream_t stream)
+//{
+//  uint_t srcPos, size;
+//  srcPos = m_size + (bufSrc << chunkBits);
 
   // Decompression before updating
 //  if (size >= 32) {
@@ -1107,9 +1107,9 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
 //    std::cout << "Decompression done" << std::endl;
 //  }
 
-  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf)
-
-}
+//  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf)
+//
+//}
 
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer &chunks, uint_t src,
