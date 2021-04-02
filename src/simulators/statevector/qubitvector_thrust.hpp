@@ -88,6 +88,7 @@ double mysecond()
 #define WARPS_BLOCK           18
 #define DIM_COMPRESS          2
 
+using uint_t = uint64_t;
 #define uchar unsigned char
 #define ull unsigned long long
 #define MAX (64*1024*1024)
@@ -352,7 +353,6 @@ namespace AER {
 namespace QV {
 
 // Type aliases
-using uint_t = uint64_t;
 using int_t = int64_t;
 using reg_t = std::vector<uint_t>;
 using indexes_t = std::unique_ptr<uint_t[]>;
