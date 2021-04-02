@@ -108,7 +108,7 @@ __device__ __constant__ int warpsblockd = 18;
 
 
 
-__global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd, int* outsize)
+__global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd, uint_t* outsize)
 {
   int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
