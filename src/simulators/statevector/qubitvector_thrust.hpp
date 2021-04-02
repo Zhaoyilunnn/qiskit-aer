@@ -1170,7 +1170,7 @@ int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chun
 //copy chunk to other container from buffer
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::Put(QubitVectorChunkContainer& chunks,uint_t dest,uint_t bufsrc,
-                                           int chunkbits,int nchunks,cudastream_t stream)
+                                           int chunkbits,int nchunks,cudaStream_t stream)
 {
   uint_t srcPos,destPos,size;
   destPos = dest << chunkBits;
