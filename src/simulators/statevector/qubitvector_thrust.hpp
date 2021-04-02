@@ -1113,7 +1113,7 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer &
 
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc,
-                                                     int chunkBits, uint_t size,cudasStream_t stream)
+                                                     int chunkBits, uint_t size,cudaStream_t stream)
 {
   uint_t destPos_off, destPos_dbuf;
   bufsrc <<= chunkBits;
