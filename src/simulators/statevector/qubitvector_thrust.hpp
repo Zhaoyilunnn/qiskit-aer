@@ -1030,7 +1030,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
                                                       uchar* dbuf, int* cut, int* off,
                                                       cudaStream_t stream)
 {
-  uint_t res;
+  uint_t res = 0;
   uint_t srcPos, size;
   srcPos = m_size + (bufSrc << chunkBits);
   size = (1ull << chunkBits) * nChunks;
