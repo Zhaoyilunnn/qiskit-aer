@@ -88,7 +88,6 @@ double mysecond()
 #define WARPS_BLOCK           18
 #define DIM_COMPRESS          2
 
-using uint_t = uint64_t;
 #define uchar unsigned char
 #define ull unsigned long long
 #define MAX (64*1024*1024)
@@ -109,7 +108,7 @@ __constant__ int warpsblockd = 18;
 
 
 
-__global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd, uint_t* outsize)
+__global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
   int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
@@ -190,7 +189,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   // save final value of off, which is total bytes of compressed output for this chunk
   if (lane == 31) offd[warp] = off;
 
-//  cudaDeviceSynchronize();
+  cudaDeviceSynchronize();
 
   if (warp == 0) { // merge compressed data to output
     *outsize = 0;
@@ -353,6 +352,7 @@ namespace AER {
 namespace QV {
 
 // Type aliases
+using uint_t = uint64_t;
 using int_t = int64_t;
 using reg_t = std::vector<uint_t>;
 using indexes_t = std::unique_ptr<uint_t[]>;
