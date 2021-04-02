@@ -1035,42 +1035,41 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
   size = (1ull << chunkBits) * nChunks;
 
   // Compression before copying back to CPU
-  if (size >= 32) {// temporally set this TODO: fix this
+//  if (size >= 32) {// temporally set this TODO: fix this
 //    size = m_pChunks->Compress(srcPos, size, stream, iStream);
-    CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
-                                                                   dbuf, cut, off);
-    CudaTest("compression kernel launch failed");
-    std::cout << "Compression done" << std::endl;
+  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
+                                                                 dbuf, cut, off);
+  CudaTest("compression kernel launch failed");
+  std::cout << "Compression done" << std::endl;
 
-    // merge output
-//    MergeOutput<<<1,1,0,stream>>>(dbuf,
-//                                  reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos),
-//                                  cut, off,
-//                                  m_pCsize->BufferPtr()+bufSrc);
+  // merge output
+//  MergeOutput<<<1,1,0,stream>>>(dbuf,
+//                                reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos),
+//                                cut, off,
+//                                m_pCsize->BufferPtr()+bufSrc);
 
-    thrust::host_vector<int> offh(BLOCKS*WARPS_BLOCK);
-    m_pOff->CopyOut(0, thrust::raw_pointer_cast(offh.data()), BLOCKS*WARPS_BLOCK);
-    thrust::host_vector<int> cuth(BLOCKS*WARPS_BLOCK);
-    m_pCut->CopyOut(0, thrust::raw_pointer_cast(cuth.data()), BLOCKS*WARPS_BLOCK);
+  thrust::host_vector<int> offh(BLOCKS*WARPS_BLOCK);
+  m_pOff->CopyOut(0, thrust::raw_pointer_cast(offh.data()), BLOCKS*WARPS_BLOCK);
+  thrust::host_vector<int> cuth(BLOCKS*WARPS_BLOCK);
+  m_pCut->CopyOut(0, thrust::raw_pointer_cast(cuth.data()), BLOCKS*WARPS_BLOCK);
 
-    std::vector<int> outOffset(BLOCKS*WARPS_BLOCK, 0);
+  std::vector<int> outOffset(BLOCKS*WARPS_BLOCK, 0);
 
-    for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
-      int start = 0;
-      if (i > 0) start = cuth[i-1];
-      offh[i] -= ((start+1)/2*17);
-      if (i > 0) outOffset[i] += offh[i-1];
-    }
-
-    for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
-      int offset, start = 0;
-      if (i > 0) start = cuth[i - 1];
-      offset = ((start+1)/2*17);
-      cudaMemcpy(reinterpret_cast<char*>(m_pChunks->BufferPtr()+srcPos)+outOffset[i], dbuf+offset, sizeof(uchar)*offh[i],
-                 cudaMemcpyDeviceToDevice);
-    }
-
+  for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
+    int start = 0;
+    if (i > 0) start = cuth[i-1];
+    offh[i] -= ((start+1)/2*17);
+    if (i > 0) outOffset[i] += offh[i-1];
   }
+
+  for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
+    int offset, start = 0;
+    if (i > 0) start = cuth[i - 1];
+    offset = ((start+1)/2*17);
+    cudaMemcpy(reinterpret_cast<char*>(m_pChunks->BufferPtr()+srcPos)+outOffset[i], dbuf+offset, sizeof(uchar)*offh[i],
+               cudaMemcpyDeviceToDevice);
+  }
+
   return outOffset[BLOCKS*WARPS_BLOCK-1]+offh[BLOCKS*WARPS_BLOCK-1];
 }
 
