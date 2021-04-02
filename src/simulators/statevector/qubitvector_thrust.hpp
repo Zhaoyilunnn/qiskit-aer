@@ -781,7 +781,7 @@ public:
   int AllocateParameters(int bits);
 
   // Compression and decompression
-  uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, cudaStream_t stream);
+  ull Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, cudaStream_t stream);
 //  void Decompression(uint_t bufSrc, int chunkBits, int nChunks, ull* fbuf, int* cut, cudaStream_t stream);
   int GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, int chunkBits, cudaStream_t stream);
   int PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc, int chunkBits, uint_t size,cudaStream_t stream);
@@ -1045,11 +1045,11 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
 
 // Compression
 template <typename data_t>
-uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks,
+ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks,
                                                       uchar* dbuf, int* cut, int* off,
                                                       cudaStream_t stream)
 {
-  uint_t res = 0;
+  ull res = 0;
   uint_t srcPos, size;
   srcPos = m_size + (bufSrc << chunkBits);
   size = (1ull << chunkBits) * nChunks;
@@ -2979,7 +2979,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       uchar* dbuf = m_Chunks[iPlace].GetDbuf();;
       int* cut = m_Chunks[iPlace].GetCut();;
       int* off = m_Chunks[iPlace].GetOff();;
-      std::vector<uint_t> outSizeACP(nGPUBuffer, 0);
+      std::vector<ull> outSizeACP(nGPUBuffer, 0);
 
       noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
