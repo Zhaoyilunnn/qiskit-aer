@@ -95,9 +95,9 @@ using uint_t = uint64_t;
 
 #define WARPSIZE 32
 
-__device__ __constant__ int dimensionalityd; // dimensionality parameter
-__device__ __constant__ int blocksd = 28;
-__device__ __constant__ int warpsblockd = 18;
+__constant__ int dimensionalityd; // dimensionality parameter
+__constant__ int blocksd = 28;
+__constant__ int warpsblockd = 18;
 
 //__device__ __constant__ ull *cbufd[AER_NUM_STREAM]; // ptr to uncompressed data
 //__device__ __constant__ unsigned char *dbufd[AER_NUM_STREAM]; // ptr to compressed data for compression
