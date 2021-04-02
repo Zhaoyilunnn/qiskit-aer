@@ -94,17 +94,17 @@ double mysecond()
 #define WARPSIZE 32
 
 __device__ __constant__ int dimensionalityd; // dimensionality parameter
-__device__ __constant__ ull *cbufd[AER_NUM_STREAM]; // ptr to uncompressed data
-__device__ __constant__ unsigned char *dbufd[AER_NUM_STREAM]; // ptr to compressed data for compression
-__device__ __constant__ unsigned char *dbufdd; // ptr to compressed data for decompression
-__device__ __constant__ ull *fbufd; // ptr to decompressed data
-__device__ __constant__ int *cutd; // ptr to chunk boundaries for compression
-__device__ __constant__ int *cutdd; // ptr to chunk boundaries for decompression
-__device__ __constant__ int *offd[AER_NUM_STREAM]; // ptr to chunk offsets after compression
+//__device__ __constant__ ull *cbufd[AER_NUM_STREAM]; // ptr to uncompressed data
+//__device__ __constant__ unsigned char *dbufd[AER_NUM_STREAM]; // ptr to compressed data for compression
+//__device__ __constant__ unsigned char *dbufdd; // ptr to compressed data for decompression
+//__device__ __constant__ ull *fbufd; // ptr to decompressed data
+//__device__ __constant__ int *cutd; // ptr to chunk boundaries for compression
+//__device__ __constant__ int *cutdd; // ptr to chunk boundaries for decompression
+//__device__ __constant__ int *offd[AER_NUM_STREAM]; // ptr to chunk offsets after compression
 
 
 
-__global__ void CompressionKernel(int iStream, ull* cbuf)
+__global__ void CompressionKernel(ull* cbufd, unsigned char* dbufd, int* cutd, int* offd)
 {
   int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
@@ -160,7 +160,7 @@ __global__ void CompressionKernel(int iStream, ull* cbuf)
     beg = off + (WARPSIZE/2) + ibufs[iindex-1];
     end = beg + bcount;
     for (; beg < end; beg++) {
-      dbufd[iStream][beg] = diff;
+      dbufd[beg] = diff;
       diff >>= 8;
     }
 
@@ -173,7 +173,7 @@ __global__ void CompressionKernel(int iStream, ull* cbuf)
     // write out half-bytes of sign and leading-zero-byte count (every other thread
     // writes its half-byte and neighbor's half-byte)
     if ((lane & 1) != 0) {
-      dbufd[iStream][off + (lane >> 1)] = ibufs[iindex-1] | (code << 4);
+      dbufd[off + (lane >> 1)] = ibufs[iindex-1] | (code << 4);
     }
     off += tmp + (WARPSIZE/2);
 
@@ -183,7 +183,7 @@ __global__ void CompressionKernel(int iStream, ull* cbuf)
   }
 
   // save final value of off, which is total bytes of compressed output for this chunk
-  if (lane == 31) offd[iStream][warp] = off;
+  if (lane == 31) offd[warp] = off;
 }
 
 /************************************************************************************/
@@ -204,7 +204,7 @@ Output
 The decompressed data in fbufd
 */
 
-__global__ void DecompressionKernel()
+__global__ void DecompressionKernel(unsigned char* dbufd, int* cutd, ull* fbufd)
 {
   int offset, code, bcount, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
@@ -224,15 +224,15 @@ __global__ void DecompressionKernel()
 
   // determine start and end of chunk to decompress
   start = 0;
-  if (warp > 0) start = cutdd[warp-1];
-  term = cutdd[warp];
+  if (warp > 0) start = cutd[warp-1];
+  term = cutd[warp];
   off = ((start+1)/2*17);
 
   prev = 0;
   for (int i = start + lane; i < term; i += WARPSIZE) {
     // read in half-bytes of size and leading-zero count information
     if ((lane & 1) == 0) {
-      code = dbufdd[off + (lane >> 1)];
+      code = dbufd[off + (lane >> 1)];
       ibufs[iindex] = code;
       ibufs[iindex + 1] = code >> 4;
     }
@@ -264,7 +264,7 @@ __global__ void DecompressionKernel()
     diff = 0;
     for (; beg <= end; end--) {
       diff <<= 8;
-      diff |= dbufdd[end];
+      diff |= dbufd[end];
     }
 
     // negate delta if sign bit indicates it was negated during compression
@@ -544,9 +544,10 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
 //    fprintf(stderr, "copying of cbufl to device failed\n");
 
 //  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(iStream);
-  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(iStream, reinterpret_cast<ull*>(BufferPtr()+size));
-  CudaTest("compression kernel launch failed");
-  std::cout << "Compression done" << std::endl;
+//  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(iStream, reinterpret_cast<ull*>(BufferPtr()+size));
+//  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(BufferPtr()+size));
+//  CudaTest("compression kernel launch failed");
+//  std::cout << "Compression done" << std::endl;
 //  int sum_byte_compressed = 0;
 //  // output m_offlset table
 //  for(int i = 0; i < blocks * warpsperblock; i++) {
@@ -636,11 +637,11 @@ protected:
 
   //===== for compression =====
   // Device
-  QubitVectorBuffer<int>* m_pOff[AER_NUM_STREAM];
   QubitVectorBuffer<int>* m_pCut;     // for compression
-  QubitVectorBuffer<int>* m_pCutD;    // for decompression
+  QubitVectorBuffer<int>* m_pOff[AER_NUM_STREAM];
+//  QubitVectorBuffer<int>* m_pCutD;    // for decompression
   QubitVectorBuffer<char>* m_pDbuf[AER_NUM_STREAM];   // for compression
-  QubitVectorBuffer<char>* m_pDbufD;  // for decompression
+//  QubitVectorBuffer<char>* m_pDbufD;  // for decompression
 
   int m_doubles;                      // number of doubles for compression
   int m_dimensionality;               // dimension
@@ -663,13 +664,13 @@ public:
     m_pOffsets = NULL;
     m_pParams = NULL;
 
+    m_pCut = NULL;
     for (int i = 0; i < AER_NUM_STREAM; i++) {
       m_pOff[i] = NULL;
       m_pDbuf[i] = NULL;
     }
-    m_pDbufD = NULL;
-    m_pCut = NULL;
-    m_pCutD = NULL;
+//    m_pDbufD = NULL;
+//    m_pCutD = NULL;
 
     m_size = 0;
     m_bufferSize = 0;
@@ -714,11 +715,26 @@ public:
     return m_size;
   }
 
+  char* GetDbuf(int iStream)
+  {
+    return m_pDbuf[iStream]->BufferPtr();
+  }
+
+  int* GetCut()
+  {
+    return m_pCut->BufferPtr();
+  }
+
+  int* GetOff(int iStream)
+  {
+    return m_pOff[iStream]->BufferPtr();
+  }
+
   int Allocate(uint_t size,uint_t bufferSize = 0, int chunkBits=21);
   int AllocateParameters(int bits);
 
   // Compression and decompression
-  uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream, int iStream);
+  uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, char* dbuf, int* cut, int* off, cudaStream_t stream);
   void Decompression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream);
   int GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, int chunkBits, cudaStream_t stream);
   int PutCompressed(QubitVectorChunkContainer& chunks, uint_t dest, int chunkBits, cudaStream_t stream, int iStream);
@@ -784,12 +800,12 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
       delete m_pOff[i];
     }
   }
-  if (m_pDbufD) {
-    delete m_pDbufD;
-  }
-  if (m_pCutD) {
-    delete m_pCutD;
-  }
+//  if (m_pDbufD) {
+//    delete m_pDbufD;
+//  }
+//  if (m_pCutD) {
+//    delete m_pCutD;
+//  }
 }
 
 //allocate buffer for chunks
@@ -824,7 +840,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     m_pChunks->Resize(size);
   }
 
-  if (m_pCut == NULL && m_pDbufD == NULL && m_pCutD == NULL) {
+  if (m_pCut == NULL) {
     m_doubles = 2 * (1ull << chunkBits); // number of doubles to compress each time
     m_dimensionality = DIM_COMPRESS;
     if (m_iDevice >= 0) { // allocate buffers on GPU for compression
@@ -834,8 +850,8 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       std::cout << "Allocating buffers on GPU for compression ..." << std::endl;
 
       m_pCut = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
-      m_pCutD = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
-      m_pDbufD = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
+//      m_pCutD = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
+//      m_pDbufD = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
 
       for (int i = 0; i < AER_NUM_STREAM; i++) {
         m_pDbuf[i] = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
@@ -865,31 +881,31 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       if (cudaSuccess != cudaMemcpyToSymbol(dimensionalityd, &m_dimensionality, sizeof(int)))
         fprintf(stderr, "copying of m_dimensionality to device failed\n");
 
-      char* dbufld = m_pDbufD->BufferPtr();
-      if (cudaSuccess != cudaMemcpyToSymbol(dbufdd, &dbufld, sizeof(void *)))
-        fprintf(stderr, "copying of m_dbufl to device failed\n");
-
-      int* cutl = m_pCut->BufferPtr();
-      if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
-        fprintf(stderr, "copying of m_cutl to device failed\n");
-
-      int* cutld = m_pCutD->BufferPtr();
-      if (cudaSuccess != cudaMemcpyToSymbol(cutdd, &cutld, sizeof(void *)))
-        fprintf(stderr, "copying of m_cutl to device failed\n");
-
-      int* offl[AER_NUM_STREAM];
-      char* dbufl[AER_NUM_STREAM];
-      for (int i = 0; i < AER_NUM_STREAM; i++) {
-        offl[i] = m_pOff[i]->BufferPtr();
-        dbufl[i] = m_pDbuf[i]->BufferPtr();
-      }
-      if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, AER_NUM_STREAM*sizeof(void *)))
-        fprintf(stderr, "copying of m_offl to device failed\n");
-      CudaTest("couldn't allocate offd");
-
-      if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, AER_NUM_STREAM*sizeof(void *)))
-        fprintf(stderr, "copying of m_dbufl to device failed\n");
-      CudaTest("couldn't allocate dbufd");
+//      char* dbufld = m_pDbufD->BufferPtr();
+//      if (cudaSuccess != cudaMemcpyToSymbol(dbufdd, &dbufld, sizeof(void *)))
+//        fprintf(stderr, "copying of m_dbufl to device failed\n");
+//
+//      int* cutl = m_pCut->BufferPtr();
+//      if (cudaSuccess != cudaMemcpyToSymbol(cutd, &cutl, sizeof(void *)))
+//        fprintf(stderr, "copying of m_cutl to device failed\n");
+//
+//      int* cutld = m_pCutD->BufferPtr();
+//      if (cudaSuccess != cudaMemcpyToSymbol(cutdd, &cutld, sizeof(void *)))
+//        fprintf(stderr, "copying of m_cutl to device failed\n");
+//
+//      int* offl[AER_NUM_STREAM];
+//      char* dbufl[AER_NUM_STREAM];
+//      for (int i = 0; i < AER_NUM_STREAM; i++) {
+//        offl[i] = m_pOff[i]->BufferPtr();
+//        dbufl[i] = m_pDbuf[i]->BufferPtr();
+//      }
+//      if (cudaSuccess != cudaMemcpyToSymbol(offd, &offl, AER_NUM_STREAM*sizeof(void *)))
+//        fprintf(stderr, "copying of m_offl to device failed\n");
+//      CudaTest("couldn't allocate offd");
+//
+//      if (cudaSuccess != cudaMemcpyToSymbol(dbufd, &dbufl, AER_NUM_STREAM*sizeof(void *)))
+//        fprintf(stderr, "copying of m_dbufl to device failed\n");
+//      CudaTest("couldn't allocate dbufd");
 //#endif
     } else { // allocate buffers on CPU for compression
       std::cout << "Allocating buffers on CPU for compression ..." << std::endl;
@@ -989,7 +1005,9 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
 
 // Compression
 template <typename data_t>
-uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream, int iStream)
+uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks,
+                                                      char* dbuf, int* cut, int* off,
+                                                      cudaStream_t stream)
 {
   uint_t srcPos, size;
   srcPos = m_size + (bufSrc << chunkBits);
@@ -997,7 +1015,10 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
 
   // Compression before copying back to CPU
   if (size >= 32) {// temporally set this TODO: fix this
-    size = m_pChunks->Compress(srcPos, size, stream, iStream);
+//    size = m_pChunks->Compress(srcPos, size, stream, iStream);
+    CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(BufferPtr()+size),
+                                                                   dbuf, cut, off);
+    CudaTest("compression kernel launch failed");
     std::cout << "Compression done" << std::endl;
 //    for (int i = 0; i < 504; i++) {
 //      int off = m_pOff->Get(i);
@@ -2918,6 +2939,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
       int num_exe = 0;
 
+      // data for compression
+      char* dbuf;
+      int* cut;
+      int* off;
+
       noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
         for (iGPUBuffer = 0; iGPUBuffer < nTotalChunks; iGPUBuffer += nGPUBuffer) {
@@ -3025,14 +3051,18 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               num_exe -= nChunksOnGPU;
               std::cout << "Num Exe: " << num_exe << std::endl;
               //copy back
+              dbuf = m_Chunks[iPlace].GetDbuf(iStream);
+              cut = m_Chunks[iPlace].GetCut();
+              off = m_Chunks[iPlace].GetOff(iStream);
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
-                m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream], iStream);
-//                m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
-//                                     chunkBits, 1, m_Streams[iStream]);
-                m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
-                                               m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
-                                               chunkBits, m_Streams[iStream], iStream);
+//                m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream], iStream);
+                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream]);
+                m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
+                                     chunkBits, 1, m_Streams[iStream]);
+//                m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
+//                                               m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
+//                                               chunkBits, m_Streams[iStream], iStream);
               }
               // Switch stream
               iStream = (iStream + 1) % num_streams; // current stream
@@ -3067,14 +3097,18 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                      enable_omp, m_Streams[iStream]);
 
           //copy back
+          dbuf = m_Chunks[iPlace].GetDbuf(iStream);
+          cut = m_Chunks[iPlace].GetCut();
+          off = m_Chunks[iPlace].GetOff(iStream);
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
-            m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream], iStream);
-//            m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
-//                                 chunkBits, 1, m_Streams[iStream]);
-            m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
-                                           m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
-                                           chunkBits, m_Streams[iStream], iStream);
+//            m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream], iStream);
+            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream]);
+            m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
+                                 chunkBits, 1, m_Streams[iStream]);
+//            m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
+//                                           m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
+//                                           chunkBits, m_Streams[iStream], iStream);
           }
         }
         // Update stream index
