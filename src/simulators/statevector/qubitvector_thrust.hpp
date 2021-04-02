@@ -848,7 +848,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     if(m_iDevice >= 0){
       cudaSetDevice(m_iDevice);
       m_pChunks = new QubitVectorDeviceBuffer<thrust::complex<data_t>>(size);
-      m_pCsize = new QubitVectorDeviceBuffer<int>(AER_MAX_GPU_BUFFERS);
+      m_pCsize = new QubitVectorDeviceBuffer<ull>(AER_MAX_GPU_BUFFERS);
       std::cout << "Allocated device size: " << size << std::endl;
     }
     else{
@@ -883,7 +883,6 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 
       m_pDbuf = new QubitVectorDeviceBuffer<uchar>((m_doubles+1)/2*17);
       m_pOff = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
-      m_pCsize = new QubitVectorChunkContainer<ull>(AER_MAX_GPU_BUFFERS);
 
       // calculate required padding for last chunk
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
