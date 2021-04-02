@@ -640,9 +640,9 @@ protected:
   //===== for compression =====
   // Device
   QubitVectorBuffer<int>* m_pCut;     // for compression
-  QubitVectorBuffer<int>* m_pOff[AER_NUM_STREAM];
+  QubitVectorBuffer<int>* m_pOff;
 //  QubitVectorBuffer<int>* m_pCutD;    // for decompression
-  QubitVectorBuffer<uchar>* m_pDbuf[AER_NUM_STREAM];   // for compression
+  QubitVectorBuffer<uchar>* m_pDbuf;   // for compression
 //  QubitVectorBuffer<char>* m_pDbufD;  // for decompression
 
   int m_doubles;                      // number of doubles for compression
@@ -667,10 +667,8 @@ public:
     m_pParams = NULL;
 
     m_pCut = NULL;
-    for (int i = 0; i < AER_NUM_STREAM; i++) {
-      m_pOff[i] = NULL;
-      m_pDbuf[i] = NULL;
-    }
+    m_pOff = NULL;
+    m_pDbuf = NULL;
 //    m_pDbufD = NULL;
 //    m_pCutD = NULL;
 
@@ -717,9 +715,9 @@ public:
     return m_size;
   }
 
-  uchar* GetDbuf(int iStream)
+  uchar* GetDbuf()
   {
-    return m_pDbuf[iStream]->BufferPtr();
+    return m_pDbuf->BufferPtr();
   }
 
   int* GetCut()
@@ -727,9 +725,9 @@ public:
     return m_pCut->BufferPtr();
   }
 
-  int* GetOff(int iStream)
+  int* GetOff()
   {
-    return m_pOff[iStream]->BufferPtr();
+    return m_pOff->BufferPtr();
   }
 
   int Allocate(uint_t size,uint_t bufferSize = 0, int chunkBits=21);
@@ -794,13 +792,11 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
   if (m_pCut) {
     delete m_pCut;
   }
-  for (int i = 0; i < AER_NUM_STREAM; i++) {
-    if (m_pDbuf[i]) {
-      delete m_pDbuf[i];
-    }
-    if (m_pOff[i]) {
-      delete m_pOff[i];
-    }
+  if (m_pDbuf) {
+    delete m_pDbuf;
+  }
+  if (m_pOff) {
+    delete m_pOff;
   }
 //  if (m_pDbufD) {
 //    delete m_pDbufD;
@@ -855,10 +851,8 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 //      m_pCutD = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
 //      m_pDbufD = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
 
-      for (int i = 0; i < AER_NUM_STREAM; i++) {
-        m_pDbuf[i] = new QubitVectorDeviceBuffer<uchar>((m_doubles+1)/2*17);
-        m_pOff[i] = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
-      }
+      m_pDbuf = new QubitVectorDeviceBuffer<uchar>(AER_MAX_GPU_BUFFERS*(m_doubles+1)/2*17);
+      m_pOff = new QubitVectorDeviceBuffer<int>(AER_MAX_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
 
       // calculate required padding for last chunk
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
@@ -913,10 +907,9 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       std::cout << "Allocating buffers on CPU for compression ..." << std::endl;
 
       m_pCut = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
-      for (int i = 0; i < AER_NUM_STREAM; i++) {
-        m_pDbuf[i] = new QubitVectorHostBuffer<uchar>((m_doubles + 1) / 2 * 17);
-        m_pOff[i] = new QubitVectorHostBuffer<int>(BLOCKS * WARPS_BLOCK);
-      }
+      m_pDbuf = new QubitVectorDeviceBuffer<uchar>(AER_MAX_GPU_BUFFERS*(m_doubles+1)/2*17);
+      m_pOff = new QubitVectorDeviceBuffer<int>(AER_MAX_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
+
       std::vector<int> cuts(BLOCKS*WARPS_BLOCK);
       int per = (m_doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
       if (per < WARPSIZE) per = WARPSIZE;
@@ -2942,9 +2935,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int num_exe = 0;
 
       // data for compression
-      uchar* dbuf;
-      int* cut;
-      int* off;
+      int doubles = 2 * (1ull << chunkBits);
+
+      uchar* dbuf = m_Chunks[iPlace].GetDbuf();;
+      uint_t per_dbuf = (doubles+1)/2*17;
+      int* cut = m_Chunks[iPlace].GetCut();;
+      int* off = m_Chunks[iPlace].GetOff();;
+      uint_t per_off = BLOCKS*WARPS_BLOCK;
 
       noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
@@ -3053,12 +3050,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               num_exe -= nChunksOnGPU;
               std::cout << "Num Exe: " << num_exe << std::endl;
               //copy back
-              dbuf = m_Chunks[iPlace].GetDbuf(iStream);
-              cut = m_Chunks[iPlace].GetCut();
-              off = m_Chunks[iPlace].GetOff(iStream);
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
-                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
+                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf+i*per_dbuf, cut, off+i*per_off, m_Streams[iStream+2]);
               }
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
@@ -3103,9 +3097,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                      enable_omp, m_Streams[iStream]);
 
           //copy back
-          dbuf = m_Chunks[iPlace].GetDbuf(iStream);
-          cut = m_Chunks[iPlace].GetCut();
-          off = m_Chunks[iPlace].GetOff(iStream);
 
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
             m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
