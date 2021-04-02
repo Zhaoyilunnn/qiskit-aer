@@ -195,8 +195,10 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 
 __global__ void MergeOutput(ull* cbufd, uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
+  printf("entering merge kernel");
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if (tid == 0) { // merge compressed data to output
+    printf("starting merge");
     uchar* cbufcd = (uchar*)cbufd;
     for (int i = 0; i < blocksd*warpsblockd; i++) {
       int offsetd, start = 0;
