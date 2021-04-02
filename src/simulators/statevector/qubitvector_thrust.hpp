@@ -203,6 +203,7 @@ __global__ void MergeOutput(ull* cbufd, uchar* dbufd, int* cutd, int* offd, ull*
       if (i > 0) start = cutd[i-1];
       offsetd = ((start+1)/2*17);
       offd[i] -= offsetd;
+      printf("%d\n", offd[i]);
       int j = 0;
       while (j < offd[i]) {
         cbufcd[*outsize+j] = dbufd[offsetd+j];
@@ -1036,7 +1037,7 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
 //    size = m_pChunks->Compress(srcPos, size, stream, iStream);
   CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
                                                                  dbuf, cut, off);
-//  CudaTest("compression kernel launch failed");
+  CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
 
   MergeOutput<<<1, 1, 0, stream>>>(reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos), dbuf, cut, off, &res);
