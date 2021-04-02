@@ -88,6 +88,7 @@ double mysecond()
 #define WARPS_BLOCK           18
 #define DIM_COMPRESS          2
 
+#define uchar unsigned char
 #define ull unsigned long long
 #define MAX (64*1024*1024)
 
@@ -104,7 +105,7 @@ __device__ __constant__ int dimensionalityd; // dimensionality parameter
 
 
 
-__global__ void CompressionKernel(ull* cbufd, unsigned char* dbufd, int* cutd, int* offd)
+__global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd)
 {
   int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
@@ -204,7 +205,7 @@ Output
 The decompressed data in fbufd
 */
 
-__global__ void DecompressionKernel(unsigned char* dbufd, int* cutd, ull* fbufd)
+__global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
 {
   int offset, code, bcount, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
@@ -641,7 +642,7 @@ protected:
   QubitVectorBuffer<int>* m_pCut;     // for compression
   QubitVectorBuffer<int>* m_pOff[AER_NUM_STREAM];
 //  QubitVectorBuffer<int>* m_pCutD;    // for decompression
-  QubitVectorBuffer<char>* m_pDbuf[AER_NUM_STREAM];   // for compression
+  QubitVectorBuffer<uchar>* m_pDbuf[AER_NUM_STREAM];   // for compression
 //  QubitVectorBuffer<char>* m_pDbufD;  // for decompression
 
   int m_doubles;                      // number of doubles for compression
@@ -716,7 +717,7 @@ public:
     return m_size;
   }
 
-  char* GetDbuf(int iStream)
+  uchar* GetDbuf(int iStream)
   {
     return m_pDbuf[iStream]->BufferPtr();
   }
@@ -735,7 +736,7 @@ public:
   int AllocateParameters(int bits);
 
   // Compression and decompression
-  uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, char* dbuf, int* cut, int* off, cudaStream_t stream);
+  uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, cudaStream_t stream);
   void Decompression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream);
   int GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, int chunkBits, cudaStream_t stream);
   int PutCompressed(QubitVectorChunkContainer& chunks, uint_t dest, int chunkBits, cudaStream_t stream, int iStream);
@@ -855,7 +856,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 //      m_pDbufD = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
 
       for (int i = 0; i < AER_NUM_STREAM; i++) {
-        m_pDbuf[i] = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
+        m_pDbuf[i] = new QubitVectorDeviceBuffer<uchar>((m_doubles+1)/2*17);
         m_pOff[i] = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
       }
 
@@ -913,7 +914,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 
       m_pCut = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
       for (int i = 0; i < AER_NUM_STREAM; i++) {
-        m_pDbuf[i] = new QubitVectorHostBuffer<char>((m_doubles + 1) / 2 * 17);
+        m_pDbuf[i] = new QubitVectorHostBuffer<uchar>((m_doubles + 1) / 2 * 17);
         m_pOff[i] = new QubitVectorHostBuffer<int>(BLOCKS * WARPS_BLOCK);
       }
       std::vector<int> cuts(BLOCKS*WARPS_BLOCK);
@@ -1007,7 +1008,7 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
 // Compression
 template <typename data_t>
 uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks,
-                                                      char* dbuf, int* cut, int* off,
+                                                      uchar* dbuf, int* cut, int* off,
                                                       cudaStream_t stream)
 {
   uint_t srcPos, size;
@@ -1117,8 +1118,8 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
       int offset, start = 0;
       if (i > 0) start = chunks.m_pCut->Get(i-1);
       offset = ((start+1)/2*17);
-      cudaMemcpyAsync(reinterpret_cast<char*>(chunks.m_pChunks->BufferPtr()+destPos_dbuf)+offset,
-                      m_pDbuf[iStream]->BufferPtr()+offset, sizeof(char)* static_cast<int>(offs[i]),
+      cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_dbuf)+offset,
+                      m_pDbuf[iStream]->BufferPtr()+offset, sizeof(uchar)* static_cast<int>(offs[i]),
                       cudaMemcpyDeviceToHost, stream);
 //      cudaMemcpy(reinterpret_cast<char*>(chunks.m_pChunks->BufferPtr()+destPos_dbuf)+offset,
 //                 (data_t*)(m_pDbuf->BufferPtr()+offset),
