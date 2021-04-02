@@ -1131,7 +1131,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 //    }
     std::cout << "Copying off done" << std::endl;
     cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_dbuf),
-                    reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+bufsrc), sizeof(uchar)* size),
+                    reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+bufsrc), sizeof(uchar)* size,
                     cudaMemcpyDeviceToHost, stream);
     std::cout << "Copying back done" << std::endl;
   }
