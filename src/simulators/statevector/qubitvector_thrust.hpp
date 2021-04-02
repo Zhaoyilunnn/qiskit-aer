@@ -1060,6 +1060,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
     int start = 0;
     if (i > 0) start = cuth[i-1];
     offh[i] -= ((start+1)/2*17);
+    std::cout << "Off: " << offh[i] << std::endl;
     res += offh[i];
     if (i > 0) outOffset[i] += offh[i-1];
   }
@@ -1071,7 +1072,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
     cudaMemcpy(reinterpret_cast<char*>(m_pChunks->BufferPtr()+srcPos)+outOffset[i], dbuf+offset, sizeof(uchar)*offh[i],
                cudaMemcpyDeviceToDevice);
   }
-
+  std::cout << "Compressed size in Byte: " << res << std::endl;
   return res;
 }
 
