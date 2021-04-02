@@ -765,7 +765,7 @@ public:
   uint_t Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, cudaStream_t stream);
   void Decompression(uint_t bufSrc, int chunkBits, int nChunks, cudaStream_t stream);
   int GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, int chunkBits, cudaStream_t stream);
-  int PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc, int chunkBits, uint_t size,cudastream_t stream);
+  int PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc, int chunkBits, uint_t size,cudaStream_t stream);
   // Compression and decompression done
 
   int Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,int chunkBits,int nChunks, cudaStream_t stream);
@@ -1113,7 +1113,7 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer &
 
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc,
-                                                     int chunkBits, uint_t size,cudastream_t stream)
+                                                     int chunkBits, uint_t size,cudasStream_t stream)
 {
   uint_t destPos_off, destPos_dbuf;
   bufsrc <<= chunkBits;
