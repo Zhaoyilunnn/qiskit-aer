@@ -671,9 +671,8 @@ protected:
   // Device
   QubitVectorBuffer<int>* m_pCut;     // for compression
   QubitVectorBuffer<int>* m_pOff;
-//  QubitVectorBuffer<int>* m_pCutD;    // for decompression
   QubitVectorBuffer<uchar>* m_pDbuf;   // for compression
-//  QubitVectorBuffer<char>* m_pDbufD;  // for decompression
+  QubitVectorBuffer<int>* m_pCsize;  // compressed size for each chunk
 
   int m_doubles;                      // number of doubles for compression
   int m_dimensionality;               // dimension
@@ -699,8 +698,7 @@ public:
     m_pCut = NULL;
     m_pOff = NULL;
     m_pDbuf = NULL;
-//    m_pDbufD = NULL;
-//    m_pCutD = NULL;
+    m_pCsize = NULL;
 
     m_size = 0;
     m_bufferSize = 0;
@@ -828,12 +826,9 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
   if (m_pOff) {
     delete m_pOff;
   }
-//  if (m_pDbufD) {
-//    delete m_pDbufD;
-//  }
-//  if (m_pCutD) {
-//    delete m_pCutD;
-//  }
+  if (m_pCsize) {
+    delete m_pCsize;
+  }
 }
 
 //allocate buffer for chunks
@@ -849,6 +844,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     if(m_iDevice >= 0){
       cudaSetDevice(m_iDevice);
       m_pChunks = new QubitVectorDeviceBuffer<thrust::complex<data_t>>(size);
+      m_pCsize = new QubitVectorDeviceBuffer<int>(AER_MAX_GPU_BUFFERS);
       std::cout << "Allocated device size: " << size << std::endl;
     }
     else{
@@ -1049,7 +1045,8 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
     // merge output
     MergeOutput<<<1,1,0,stream>>>(dbuf,
                                   reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos),
-                                  cut, off);
+                                  cut, off,
+                                  m_pCsize->BufferPtr()+bufSrc);
 
   }
   return size;
