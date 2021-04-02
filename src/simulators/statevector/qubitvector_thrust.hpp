@@ -3056,10 +3056,14 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               dbuf = m_Chunks[iPlace].GetDbuf(iStream);
               cut = m_Chunks[iPlace].GetCut();
               off = m_Chunks[iPlace].GetOff(iStream);
+
+              for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
+                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
+              }
+
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
 //                m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream], iStream);
-                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
                 m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                      chunkBits, 1, m_Streams[iStream]);
 //                m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
@@ -3102,10 +3106,14 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           dbuf = m_Chunks[iPlace].GetDbuf(iStream);
           cut = m_Chunks[iPlace].GetCut();
           off = m_Chunks[iPlace].GetOff(iStream);
+
+          for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
+            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
+          }
+
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
 //            m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream], iStream);
-            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1, m_Streams[iStream]);
 //            m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
