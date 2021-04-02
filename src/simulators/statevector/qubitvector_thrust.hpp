@@ -1080,7 +1080,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 //    for (int i = 0; i < 504; i++) {
 //      std::cout << m_pOff->Get(i) << std::endl;
 //    }
-    cudaMemcpy(chunks.m_pOff[iStream]->BufferPtr(), m_pOff[iStream]->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int), cudaMemcpyDeviceToHost);
+    cudaMemcpy(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int), cudaMemcpyDeviceToHost);
 //    for (int i = 0; i < 504; i++) {
 //      std::cout << chunks.m_pOff[iStream]->Get(i) << std::endl;
 //    }
@@ -1092,9 +1092,9 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 //      std::cout << "start: " << start << std::endl;
       int off = chunks.m_pOff[iStream]->Get(i);
 //      std::cout << "off: " << off << std::endl;
-      chunks.m_pOff[iStream]->Set(i, off-((start+1)/2*17));
+      chunks.m_pOff->Set(i, off-((start+1)/2*17));
       memcpy(reinterpret_cast<int*>(chunks.m_pChunks->BufferPtr()+destPos_off)+i,
-             chunks.m_pOff[iStream]->BufferPtr()+i, sizeof(int));
+             chunks.m_pOff->BufferPtr()+i, sizeof(int));
     }
 
     std::cout << "Setting off done" << std::endl;
