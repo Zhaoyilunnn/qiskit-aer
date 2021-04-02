@@ -132,7 +132,7 @@ __global__ void CompressionKernel(ull* cbufd, unsigned char* dbufd, int* cutd, i
   for (int i = start + lane; i < term; i += WARPSIZE) {
     // calculate delta between value to compress and prediction
     // and negate if negative
-    diff = cbuf[i] - prev;
+    diff = cbufd[i] - prev;
     code = (diff >> 60) & 8;
     if (code != 0) {
       diff = -diff;
@@ -179,7 +179,7 @@ __global__ void CompressionKernel(ull* cbufd, unsigned char* dbufd, int* cutd, i
 
     // save prediction value from this subchunk (based on provided dimensionality)
     // for use in next subchunk
-    prev = cbuf[i + offset];
+    prev = cbufd[i + offset];
   }
 
   // save final value of off, which is total bytes of compressed output for this chunk
