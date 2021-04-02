@@ -190,7 +190,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   // save final value of off, which is total bytes of compressed output for this chunk
   if (lane == 31) offd[warp] = off;
 
-  cudaDeviceSynchronize();
+//  cudaDeviceSynchronize();
 
   if (warp == 0) { // merge compressed data to output
     *outsize = 0;
