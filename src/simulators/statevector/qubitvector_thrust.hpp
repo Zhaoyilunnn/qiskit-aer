@@ -95,6 +95,9 @@ double mysecond()
 #define WARPSIZE 32
 
 __device__ __constant__ int dimensionalityd; // dimensionality parameter
+__device__ __constant__ int doublesd = 28;
+__device__ __constant__ int warpsblockd = 18;
+
 //__device__ __constant__ ull *cbufd[AER_NUM_STREAM]; // ptr to uncompressed data
 //__device__ __constant__ unsigned char *dbufd[AER_NUM_STREAM]; // ptr to compressed data for compression
 //__device__ __constant__ unsigned char *dbufdd; // ptr to compressed data for decompression
@@ -279,6 +282,33 @@ __global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
 
     // save prediction for next subchunk
     prev = fbufd[i + offset];
+  }
+}
+
+/**
+ * Merge compressed data together
+ * @param dbuf
+ * @param doutbuf
+ * @param off
+ * @param cut
+ * @param outsize
+ * @return
+ */
+
+__global__ void MergeOutput(uchar* dbuf, uchar* doutbuf, int* off, int* cut, int* outsize)
+{
+  for (int i = 0; i < blocksd * warpsblockd; i++) {
+    int offset, start = 0;
+    if (i > 0) start = cut[i - 1];
+    off[i] -= ((start+1)/2*17);
+    offset = ((start+1)/2*17);
+    int j = 0;
+    while (j < off[i]) {
+      *(doutbuf+j) = *(dbuf+offset+j);
+      j++;
+    }
+    doutbuf += off[i];
+    *outsize += off[i];
   }
 }
 
@@ -1015,12 +1045,11 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
                                                                    dbuf, cut, off);
     CudaTest("compression kernel launch failed");
     std::cout << "Compression done" << std::endl;
-//    for (int i = 0; i < 504; i++) {
-//      int off = m_pOff->Get(i);
-//      std::cout << "Off: " << off << std::endl;
-//    }
 
-
+    // merge output
+    MergeOutput<<<1,1,0,stream>>>(dbuf,
+                                  reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos),
+                                  cut, off);
 
   }
   return size;
