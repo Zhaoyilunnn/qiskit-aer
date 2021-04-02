@@ -1030,6 +1030,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
                                                       uchar* dbuf, int* cut, int* off,
                                                       cudaStream_t stream)
 {
+  uint_t res;
   uint_t srcPos, size;
   srcPos = m_size + (bufSrc << chunkBits);
   size = (1ull << chunkBits) * nChunks;
@@ -1059,6 +1060,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
     int start = 0;
     if (i > 0) start = cuth[i-1];
     offh[i] -= ((start+1)/2*17);
+    res += offh[i];
     if (i > 0) outOffset[i] += offh[i-1];
   }
 
@@ -1070,7 +1072,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
                cudaMemcpyDeviceToDevice);
   }
 
-  return outOffset[BLOCKS*WARPS_BLOCK-1]+offh[BLOCKS*WARPS_BLOCK-1];
+  return res;
 }
 
 template <typename data_t>
