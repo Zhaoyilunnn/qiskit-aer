@@ -104,7 +104,7 @@ __device__ __constant__ int *offd[AER_NUM_STREAM]; // ptr to chunk offsets after
 
 
 
-__global__ void CompressionKernel(int iStream)
+__global__ void CompressionKernel(int iStream, ull* cbuf)
 {
   int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev;
@@ -132,7 +132,7 @@ __global__ void CompressionKernel(int iStream)
   for (int i = start + lane; i < term; i += WARPSIZE) {
     // calculate delta between value to compress and prediction
     // and negate if negative
-    diff = cbufd[iStream][i] - prev;
+    diff = cbuf[i] - prev;
     code = (diff >> 60) & 8;
     if (code != 0) {
       diff = -diff;
@@ -179,7 +179,7 @@ __global__ void CompressionKernel(int iStream)
 
     // save prediction value from this subchunk (based on provided dimensionality)
     // for use in next subchunk
-    prev = cbufd[iStream][i + offset];
+    prev = cbuf[i + offset];
   }
 
   // save final value of off, which is total bytes of compressed output for this chunk
@@ -539,12 +539,12 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
 //      std::cout << m_Buffer[cc] << std::endl;
 //    }
 
+//  if (cudaSuccess != cudaMemcpyToSymbol(cbufd, &cbufl, sizeof(void *), iStream*sizeof(void*)))
 //  if (cudaSuccess != cudaMemcpyToSymbolAsync(cbufd, &cbufl, sizeof(void *), iStream*sizeof(void*), cudaMemcpyHostToDevice, stream))
-  if (cudaSuccess != cudaMemcpyToSymbol(cbufd, &cbufl, sizeof(void *), iStream*sizeof(void*)))
-    fprintf(stderr, "copying of cbufl to device failed\n");
+//    fprintf(stderr, "copying of cbufl to device failed\n");
 
 //  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(iStream);
-  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK>>>(iStream);
+  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(iStream, reinterpret_cast<ull*>(BufferPtr()+size));
   CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
 //  int sum_byte_compressed = 0;
