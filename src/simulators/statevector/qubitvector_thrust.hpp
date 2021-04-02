@@ -851,8 +851,8 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 //      m_pCutD = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
 //      m_pDbufD = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
 
-      m_pDbuf = new QubitVectorDeviceBuffer<uchar>(AER_MAX_GPU_BUFFERS*(m_doubles+1)/2*17);
-      m_pOff = new QubitVectorDeviceBuffer<int>(AER_MAX_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
+      m_pDbuf = new QubitVectorDeviceBuffer<uchar>((m_doubles+1)/2*17);
+      m_pOff = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
 
       // calculate required padding for last chunk
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
@@ -907,8 +907,8 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       std::cout << "Allocating buffers on CPU for compression ..." << std::endl;
 
       m_pCut = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
-      m_pDbuf = new QubitVectorHostBuffer<uchar>(AER_MAX_GPU_BUFFERS*(m_doubles+1)/2*17);
-      m_pOff = new QubitVectorHostBuffer<int>(AER_MAX_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
+      m_pDbuf = new QubitVectorHostBuffer<uchar>((m_doubles+1)/2*17);
+      m_pOff = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
 
       std::vector<int> cuts(BLOCKS*WARPS_BLOCK);
       int per = (m_doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
@@ -1019,6 +1019,9 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
 //      int off = m_pOff->Get(i);
 //      std::cout << "Off: " << off << std::endl;
 //    }
+
+
+
   }
   return size;
 }
@@ -3052,7 +3055,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               //copy back
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
-                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf+i*per_dbuf, cut, off+i*per_off, m_Streams[iStream+2]);
+                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
               }
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
