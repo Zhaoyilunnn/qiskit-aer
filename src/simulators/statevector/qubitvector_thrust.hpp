@@ -191,6 +191,10 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 
 //  cudaDeviceSynchronize();
 //
+}
+
+__global__ void MergeOutput(ull* cbufd, uchar* dbufd, int* cutd, int* offd)
+{
   if (warp == 0) { // merge compressed data to output
     int offsetc = 0;
     uchar* cbufcd = (uchar*)cbufd;
@@ -303,33 +307,6 @@ __global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
     prev = fbufd[i + offset];
   }
 }
-
-/**
- * Merge compressed data together
- * @param dbuf
- * @param doutbuf
- * @param off
- * @param cut
- * @param outsize
- * @return
- */
-
-//__global__ void MergeOutput(uchar* dbuf, uchar* doutbuf, int* off, int* cut, int* outsize)
-//{
-//  for (int i = 0; i < blocksd * warpsblockd; i++) {
-//    int offset, start = 0;
-//    if (i > 0) start = cut[i - 1];
-//    off[i] -= ((start+1)/2*17);
-//    offset = ((start+1)/2*17);
-//    int j = 0;
-//    while (j < off[i]) {
-//      *(doutbuf+j) = *(dbuf+offset+j);
-//      j++;
-//    }
-//    doutbuf += off[i];
-//    *outsize += off[i];
-//  }
-//}
 
 /************************************************************************************/
 
