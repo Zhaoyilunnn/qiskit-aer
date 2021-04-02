@@ -2148,7 +2148,7 @@ template <typename data_t>
 void QubitVectorThrust<data_t>::create_streams()
 {
   std::cout << "Creating streams ..." << std::endl;
-  int num_streams = AER_NUM_STREAM;
+  int num_streams = 2*AER_NUM_STREAM; // for compression
   for (int i = 0; i < num_streams; i++) {
     cudaStreamCreate(&m_Streams[i]);
   }
@@ -3059,7 +3059,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
 //                m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream], iStream);
-                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream]);
+                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
                 m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                      chunkBits, 1, m_Streams[iStream]);
 //                m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
@@ -3105,7 +3105,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
 //            m_Chunks[iPlace].Compression(i, chunkBits, 1, m_Streams[iStream], iStream);
-            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream]);
+            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
             m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                  chunkBits, 1, m_Streams[iStream]);
 //            m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
