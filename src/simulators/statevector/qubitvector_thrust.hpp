@@ -1092,7 +1092,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
       int offset, start = 0;
       if (i > 0) start = chunks.m_pCut->Get(i-1);
       offset = ((start+1)/2*17);
-      cudaMemcpyAsync(reinterpret_cast<char*>(chunks.m_pChunks[iStream]->BufferPtr()+destPos_dbuf)+offset,
+      cudaMemcpyAsync(reinterpret_cast<char*>(chunks.m_pChunks->BufferPtr()+destPos_dbuf)+offset,
                       m_pDbuf[iStream]->BufferPtr()+offset, sizeof(char)* static_cast<int>(offs[i]),
                       cudaMemcpyDeviceToHost, stream);
 //      cudaMemcpy(reinterpret_cast<char*>(chunks.m_pChunks->BufferPtr()+destPos_dbuf)+offset,
