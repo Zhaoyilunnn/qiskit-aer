@@ -205,7 +205,7 @@ __global__ void MergeOutput(ull* cbufd, uchar* dbufd, int* cutd, int* offd, ull*
       if (i > 0) start = cutd[i-1];
       offsetd = ((start+1)/2*17);
       offd[i] -= offsetd;
-      printf("%d\n", offd[i]);
+//      printf("%d\n", offd[i]);
       int j = 0;
       while (j < offd[i]) {
         cbufcd[*outsize+j] = dbufd[offsetd+j];
