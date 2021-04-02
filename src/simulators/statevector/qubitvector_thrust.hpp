@@ -533,7 +533,8 @@ uint_t QubitVectorDeviceBuffer<data_t>::Compress(uint_t pos, uint_t size, cudaSt
 {
   uint_t out_size = size;
 //  ull *cbufl = reinterpret_cast<ull*>(thrust::raw_pointer_cast(m_Buffer.data() + size)); // uncompressed data
-  ull *cbufl = reinterpret_cast<ull*>(BufferPtr()+size); // uncompressed data
+//  ull *cbufl = reinterpret_cast<ull*>(BufferPtr()+size); // uncompressed data
+  ull *cbufl = reinterpret_cast<ull*>(BufferPtr()+pos); // uncompressed data
 
 //    for (int cc = 0; cc < 10; cc++) {
 //      std::cout << m_Buffer[cc] << std::endl;
@@ -1016,7 +1017,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
   // Compression before copying back to CPU
   if (size >= 32) {// temporally set this TODO: fix this
 //    size = m_pChunks->Compress(srcPos, size, stream, iStream);
-    CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(BufferPtr()+size),
+    CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
                                                                    dbuf, cut, off);
     CudaTest("compression kernel launch failed");
     std::cout << "Compression done" << std::endl;
