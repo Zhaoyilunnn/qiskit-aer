@@ -1066,7 +1066,7 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
       int offset, start = 0;
       if (i > 0) start = cuth[i - 1];
       offset = ((start+1)/2*17);
-      cudaMemCpy(reinterpret_cast<char*>(m_pChunks->BufferPtr()+srcPos)+outOffset[i], dbuf+offset, sizeof(uchar)*offh[i],
+      cudaMemcpy(reinterpret_cast<char*>(m_pChunks->BufferPtr()+srcPos)+outOffset[i], dbuf+offset, sizeof(uchar)*offh[i],
                  cudaMemcpyDeviceToDevice);
     }
 
