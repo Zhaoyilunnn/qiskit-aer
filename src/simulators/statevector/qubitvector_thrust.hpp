@@ -1052,15 +1052,22 @@ uint_t QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBi
     m_pOff->CopyOut(0, thrust::raw_pointer_cast(offh.data()), BLOCKS*WARPS_BLOCK);
     thrust::host_vector<int> cuth(BLOCKS*WARPS_BLOCK);
     m_pCut->CopyOut(0, thrust::raw_pointer_cast(cuth.data()), BLOCKS*WARPS_BLOCK);
-    int outOffset = 0;
+
+    std::vector<int> outOffset(BLOCKS*WARPS_BLOCK, 0);
+
+    for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
+      int start = 0;
+      if (i > 0) start = cuth[i-1];
+      offh[i] -= ((start+1)/2*17);
+      if (i > 0) outOffset[i] += offh[i-1];
+    }
+
     for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
       int offset, start = 0;
       if (i > 0) start = cuth[i - 1];
-      offh[i] -= ((start+1)/2*17);
       offset = ((start+1)/2*17);
-      cudaMemCpy(reinterpret_cast<char*>(m_pChunks->BufferPtr()+srcPos)+outOffset, dbuf+offset, sizeof(uchar)*offh[i],
+      cudaMemCpy(reinterpret_cast<char*>(m_pChunks->BufferPtr()+srcPos)+outOffset[i], dbuf+offset, sizeof(uchar)*offh[i],
                  cudaMemcpyDeviceToDevice);
-      outOffset += offh[i];
     }
 
   }
