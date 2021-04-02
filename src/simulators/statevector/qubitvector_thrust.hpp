@@ -2942,7 +2942,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int num_exe = 0;
 
       // data for compression
-      char* dbuf;
+      uchar* dbuf;
       int* cut;
       int* off;
 
