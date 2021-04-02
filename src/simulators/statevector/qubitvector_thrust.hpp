@@ -189,24 +189,24 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   // save final value of off, which is total bytes of compressed output for this chunk
   if (lane == 31) offd[warp] = off;
 
-  cudaDeviceSynchronize();
-
-  if (warp == 0) { // merge compressed data to output
-    int offsetc = 0;
-    uchar* cbufcd = (uchar*)cbufd;
-    for (int i = 0; i < blocksd*warpsblockd; i++) {
-      int offsetd, start = 0;
-      if (i > 0) start = cutd[i-1];
-      offsetd = ((start+1)/2*17);
-      offd[i] -= offsetd;
-      int j = 0;
-      while (j < offd[i]) {
-        cbufcd[offsetc+j] = dbufd[offsetd+j];
-        j++;
-      }
-      offsetc += offd[i];
-    }
-  }
+//  cudaDeviceSynchronize();
+//
+//  if (warp == 0) { // merge compressed data to output
+//    int offsetc = 0;
+//    uchar* cbufcd = (uchar*)cbufd;
+//    for (int i = 0; i < blocksd*warpsblockd; i++) {
+//      int offsetd, start = 0;
+//      if (i > 0) start = cutd[i-1];
+//      offsetd = ((start+1)/2*17);
+//      offd[i] -= offsetd;
+//      int j = 0;
+//      while (j < offd[i]) {
+//        cbufcd[offsetc+j] = dbufd[offsetd+j];
+//        j++;
+//      }
+//      offsetc += offd[i];
+//    }
+//  }
 }
 
 /************************************************************************************/
