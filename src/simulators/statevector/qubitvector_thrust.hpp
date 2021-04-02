@@ -95,7 +95,7 @@ double mysecond()
 #define WARPSIZE 32
 
 __device__ __constant__ int dimensionalityd; // dimensionality parameter
-__device__ __constant__ int doublesd = 28;
+__device__ __constant__ int blocksd = 28;
 __device__ __constant__ int warpsblockd = 18;
 
 //__device__ __constant__ ull *cbufd[AER_NUM_STREAM]; // ptr to uncompressed data
