@@ -2988,7 +2988,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       uchar* dbuf = m_Chunks[iPlace].GetDbuf();
       int* cut = m_Chunks[iPlace].GetCut();
       int* off = m_Chunks[iPlace].GetOff();
-      thrust::host_vector<ull, thrust::cuda::experimental::pinned_allocator<ull> > vCsize(nGPUBuffer, 0);
+      thrust::host_vector<ull> vCsize(nGPUBuffer, 0);
 //      ull csize = 0;
 
       noDataExchange = 0;                                         // do not enable noDataExchange
