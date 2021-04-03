@@ -216,7 +216,7 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 //    printf("offdmerge %d\n", offd[j]);
 //    offdest += offd[j];
 //  }
-  offsrc = warp > 0 ? (cutd[tid-1]+1)/2*17 : 0;
+  offsrc = warp > 0 ? (cutd[warp-1]+1)/2*17 : 0;
   for (int i = 0; i < warp; i++) {
     offdest += offd[i];
   }
@@ -225,7 +225,7 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
   if (lane == 31) {
     memcpy(dbufd + offdest, dbufd + offsrc, offd[warp] * sizeof(uchar));
   }
-  if (warp == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest + offd[tid];
+  if (warp == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest + offd[warp];
 }
 
 /************************************************************************************/
