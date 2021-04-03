@@ -84,8 +84,8 @@ double mysecond()
 #define AER_MAX_GPU_BUFFERS   64
 #define AER_NUM_STREAM        2
 
-#define BLOCKS                16
-#define WARPS_BLOCK           8
+#define BLOCKS                56
+#define WARPS_BLOCK           36
 #define DIM_COMPRESS          2
 
 #define uchar unsigned char
@@ -194,7 +194,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
     } else {
       offd[warp] = off;
     }
-    printf("offdcompress: %d\n", offd[warp]);
+//    printf("offdcompress: %d\n", offd[warp]);
   }
 
 //  cudaDeviceSynchronize();
@@ -205,14 +205,14 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
   printf("merge start\n");
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
-  printf("tid id %d\n", tid);
+//  printf("tid id %d\n", tid);
   int offdest[WARPS_BLOCK*BLOCKS] = {0};
 
   for (int i = 0; i < tid; i++) {
     offdest[tid] += offd[i];
   }
-  printf("start merging \n");
-  printf("offdest %d\n", offdest[tid]);
+//  printf("start merging \n");
+//  printf("offdest %d\n", offdest[tid]);
   memcpy(dbufd + offdest[tid], dbufd + (tid > 0 ? (cutd[tid-1]+1)/2*17 : 0), offd[tid] * sizeof(uchar));
   if (tid == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest[tid] + offd[tid];
 }
