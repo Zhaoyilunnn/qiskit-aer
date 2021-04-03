@@ -765,6 +765,10 @@ public:
     return m_pCsize->Get(i);
   }
 
+  void CopyCsizeOutAsync(ull* pdest, uint_t src, uint_t size, cudaStream_t stream) {
+    cudaMemcpyAsync(pdest, m_pCsize->BufferPtr()+src, size*sizeof(ull), cudaMemcpyDeviceToHost, stream);
+  }
+
   int Allocate(uint_t size,uint_t bufferSize = 0, int chunkBits=21);
   int AllocateParameters(int bits);
 
@@ -2968,10 +2972,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
       // data for compression
       int doubles = 2 * (1ull << chunkBits);
-      uchar* dbuf = m_Chunks[iPlace].GetDbuf();;
-      int* cut = m_Chunks[iPlace].GetCut();;
-      int* off = m_Chunks[iPlace].GetOff();;
-      ull csize = 0;
+      uchar* dbuf = m_Chunks[iPlace].GetDbuf();
+      int* cut = m_Chunks[iPlace].GetCut();
+      int* off = m_Chunks[iPlace].GetOff();
+      thrust::host_vector<ull, thrust::cuda::experimental::pinned_allocator<ull> > vCsize(nGPUBuffer, 0);
+//      ull csize = 0;
 
       noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
@@ -3085,6 +3090,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                 m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
 //                std::cout << outSizeACP[i] << std::endl;
               }
+              m_Chunks[iPlace].CopyCsizeOutAsync(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
+                                                 iStream*nGPUBufferPerStream, nGPUBufferPerStream, m_Streams[iStream]);
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
@@ -3092,10 +3099,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 //                m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
 //                                     chunkBits, 1, m_Streams[iStream]);
 //                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
-                csize = m_Chunks[iPlace].GetCsize(i);
+//                csize = m_Chunks[iPlace].GetCsize(i);
+                std::cout << "Compressed size" << vCsize[i] << std::endl;
                 m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                                m_Chunks[places[i]].LocalChunkID(chunkIDs[i],chunkBits),
-                                               i, chunkBits, csize, m_Streams[iStream]);
+                                               i, chunkBits, vCsize[i], m_Streams[iStream]);
               }
               // Switch stream
               iStream = (iStream + 1) % AER_NUM_STREAM; // current stream
@@ -3135,6 +3143,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
 ////            std::cout << outSizeACP[i] << std::endl;
           }
+          m_Chunks[iPlace].CopyCsizeOutAsync(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
+                                             iStream*nGPUBufferPerStream, nGPUBufferPerStream, m_Streams[iStream]);
 
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
@@ -3142,10 +3152,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 //            m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
 //                                 chunkBits, 1, m_Streams[iStream]);
 //            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
-            csize = m_Chunks[iPlace].GetCsize(i);
+//            csize = m_Chunks[iPlace].GetCsize(i);
+            std::cout << "Compressed size" << vCsize[i] << std::endl;
             m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                            m_Chunks[places[i]].LocalChunkID(chunkIDs[i],chunkBits),
-                                           i, chunkBits, csize, m_Streams[iStream]);
+                                           i, chunkBits, vCsize[i], m_Streams[iStream]);
           }
         }
         // Update stream index
