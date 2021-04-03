@@ -200,7 +200,7 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 
   for (int j = 0; j < tid+1; j++) {
     if (j > 0) start = cutd[j-1];
-    offsrc = ((start+1)/2*17)
+    offsrc = ((start+1)/2*17);
     offd[j] -= offsrc;
     offdest += offd[j];
   }
