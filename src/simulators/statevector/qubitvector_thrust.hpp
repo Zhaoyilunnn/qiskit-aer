@@ -3114,7 +3114,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 //                                     chunkBits, 1, m_Streams[iStream]);
 //                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
 //                csize = m_Chunks[iPlace].GetCsize(i);
-                std::cout << "Compressed size" << vCsize[i] << std::endl;
+                std::cout << "Compressed size " << vCsize[i] << std::endl;
                 m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                                m_Chunks[places[i]].LocalChunkID(chunkIDs[i],chunkBits),
                                                i, chunkBits, vCsize[i], m_Streams[iStream]);
@@ -3168,7 +3168,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 //                                 chunkBits, 1, m_Streams[iStream]);
 //            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
 //            csize = m_Chunks[iPlace].GetCsize(i);
-            std::cout << "Compressed size" << vCsize[i] << std::endl;
+            std::cout << "Compressed size " << vCsize[i] << std::endl;
             m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                            m_Chunks[places[i]].LocalChunkID(chunkIDs[i],chunkBits),
                                            i, chunkBits, vCsize[i], m_Streams[iStream]);
