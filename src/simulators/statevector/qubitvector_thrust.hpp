@@ -1062,7 +1062,7 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
   SetOffsetTable<<<BLOCKS, WARPS_BLOCK, 0, stream>>>(reinterpret_cast<int*>(m_pChunks->BufferPtr()+srcPos), off);
 
 //  MergeOutput<<<4, 126, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
-  MergeOutput<<<BLOCKS, WARPS_BLOCK, 0, stream>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPosOff),
+  MergeOutput<<<BLOCKS*WARPS_BLOCK, 1, 0, stream>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPosOff),
                                      dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
 
   *outsize = m_pCsize->Get(bufSrc);
