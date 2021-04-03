@@ -204,29 +204,18 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
   printf("merge start\n");
-  int warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
-  int lane = threadIdx.x & 31;
-  printf("warp id %d\n", warp);
-  int offsrc, offdest, start = 0;
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  printf("tid id %d\n", tid);
+  int offdest[WARPS_BLOCK*BLOCKS] = {0};
 
-//  for (int j = 0; j < warp+1; j++) {
-//    if (j > 0) start = cutd[j-1];
-//    offsrc = ((start+1)/2*17);
-//    offd[j] -= offsrc;
-//    printf("offdmerge %d\n", offd[j]);
-//    offdest += offd[j];
-//  }
-  offsrc = warp > 0 ? (cutd[warp-1]+1)/2*17 : 0;
-  for (int i = 0; i < warp; i++) {
-    offdest += offd[i];
+  for (int i = 0; i < tid; i++) {
+    offdest[tid] += offd[i];
   }
-  if (lane == 31) {
-    printf("start merging \n")
-    printf("offdest %d\n", offdest);
-    printf("offsrc %d\n", offsrc);
-    memcpy(dbufd + offdest, dbufd + offsrc, offd[warp] * sizeof(uchar));
-  }
-  if (warp == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest + offd[warp];
+  printf("start merging \n")
+  printf("offdest %d\n", offdest);
+  printf("offsrc %d\n", offsrc);
+  memcpy(dbufd + offdest, dbufd + (tid > 0 ? (cutd[tid-1]+1)/2*17 : 0), offd[tid] * sizeof(uchar));
+  if (tid == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest + offd[tid];
 }
 
 /************************************************************************************/
@@ -1060,7 +1049,7 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
   CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
 
-  MergeOutput<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
+  MergeOutput<<<1, BLOCKS*WARPS_BLOCK, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
 
   // merge output
 //  MergeOutput<<<1,1,0,stream>>>(dbuf,
