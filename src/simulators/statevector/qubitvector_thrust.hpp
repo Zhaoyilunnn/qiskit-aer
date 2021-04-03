@@ -201,6 +201,11 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 //
 }
 
+//__global__ void SetOffsetTable(int* cbufd, int* offd)
+//{
+//
+//}
+
 //__global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 __global__ void MergeOutput(uchar*cbufd, uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
@@ -765,8 +770,8 @@ public:
     return m_pCsize->Get(i);
   }
 
-  void CopyCsizeOutAsync(ull* pdest, uint_t src, uint_t size, cudaStream_t stream) {
-    cudaMemcpyAsync(pdest, m_pCsize->BufferPtr()+src, size*sizeof(ull), cudaMemcpyDeviceToHost, stream);
+  void CopyCsizeOut(ull* pdest, uint_t src, uint_t size) {
+    cudaMemcpy(pdest, m_pCsize->BufferPtr()+src, size*sizeof(ull), cudaMemcpyDeviceToHost);
   }
 
   int Allocate(uint_t size,uint_t bufferSize = 0, int chunkBits=21);
@@ -3094,8 +3099,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                 m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
 //                std::cout << outSizeACP[i] << std::endl;
               }
-              m_Chunks[iPlace].CopyCsizeOutAsync(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
-                                                 iStream*nGPUBufferPerStream, nGPUBufferPerStream, m_Streams[iStream]);
+              m_Chunks[iPlace].CopyCsizeOut(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
+                                            iStream*nGPUBufferPerStream, nGPUBufferPerStream);
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
@@ -3147,8 +3152,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
 ////            std::cout << outSizeACP[i] << std::endl;
           }
-          m_Chunks[iPlace].CopyCsizeOutAsync(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
-                                             iStream*nGPUBufferPerStream, nGPUBufferPerStream, m_Streams[iStream]);
+          m_Chunks[iPlace].CopyCsizeOut(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
+                                        iStream*nGPUBufferPerStream, nGPUBufferPerStream);
 
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
