@@ -197,12 +197,14 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int offsrc, offdest, start = 0;
-  if (tid > 0) start = cutd[tid-1];
-  offsrc = ((start+1)/2*17);
-  offd[tid] -= offsrc;
-  for (int j = 0; j < tid; j++) {
+
+  for (int j = 0; j < tid+1; j++) {
+    if (j > 0) start = cutd[j-1];
+    offsrc = ((start+1)/2*17)
+    offd[j] -= offsrc;
     offdest += offd[j];
   }
+
   memcpy(dbufd+offdest, dbufd+offsrc, offd[tid]*sizeof(uchar));
   if (tid == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest + offd[tid];
 }
