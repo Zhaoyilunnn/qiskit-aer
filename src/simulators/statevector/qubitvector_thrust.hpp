@@ -201,10 +201,11 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 //
 }
 
-//__global__ void SetOffsetTable(int* cbufd, int* offd)
-//{
-//
-//}
+__global__ void SetOffsetTable(int* cbufd, int* offd)
+{
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  cbufd[tid] = offd[tid];
+}
 
 //__global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 __global__ void MergeOutput(uchar*cbufd, uchar* dbufd, int* cutd, int* offd, ull* outsize)
@@ -1047,9 +1048,10 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
                                                       cudaStream_t stream)
 {
   ull res = 0;
-  uint_t srcPos, size;
+  uint_t srcPos, srcPosOff, size;
   srcPos = m_size + (bufSrc << chunkBits);
   size = (1ull << chunkBits) * nChunks;
+  srcPosOff = srcPos + (BLOCKS*WARPS_BLOCK)*sizeof(int) / sizeof(data_t);
 
   // Compression before copying back to CPU
 //  if (size >= 32) {// temporally set this TODO: fix this
@@ -1059,8 +1061,10 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
   CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
 
+  SetOffsetTable<<<BLOCKS, WARPS_BLOCK, 0, stream>>>(reinterpret_cast<int*>(m_pChunks->BufferPtr()+srcPos), off);
+
 //  MergeOutput<<<4, 126, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
-  MergeOutput<<<28, 16, 0, stream>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos),
+  MergeOutput<<<BLOCKS, WARPS_BLOCK, 0, stream>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPosOff),
                                      dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
 
   // merge output
@@ -1160,7 +1164,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 //                    m_pDbuf->BufferPtr(), sizeof(uchar)* size,
 //                    cudaMemcpyDeviceToHost, stream);
     cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_off),
-                    m_pDbuf->BufferPtr(), sizeof(uchar)* size,
+                    m_pDbuf->BufferPtr(), (BLOCKS*WARPS_BLOCK)*sizeof(int)+sizeof(uchar)* size,
                     cudaMemcpyDeviceToHost, stream);
 
     std::cout << "Copying back done" << std::endl;
