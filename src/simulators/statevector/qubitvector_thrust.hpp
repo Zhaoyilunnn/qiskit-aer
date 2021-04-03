@@ -212,9 +212,9 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
     offdest[tid] += offd[i];
   }
   printf("start merging \n")
-  printf("offdest %d\n", offdest);
+  printf("offdest %d\n", offdest[tid]);
   printf("offsrc %d\n", offsrc);
-  memcpy(dbufd + offdest, dbufd + (tid > 0 ? (cutd[tid-1]+1)/2*17 : 0), offd[tid] * sizeof(uchar));
+  memcpy(dbufd + offdest[tid], dbufd + (tid > 0 ? (cutd[tid-1]+1)/2*17 : 0), offd[tid] * sizeof(uchar));
   if (tid == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest + offd[tid];
 }
 
