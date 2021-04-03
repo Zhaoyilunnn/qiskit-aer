@@ -196,20 +196,26 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
-  if (tid == 0) { // merge compressed data to output
-    for (int i = 0; i < blocksd*warpsblockd; i++) {
-      int offsetd, start = 0;
-      if (i > 0) start = cutd[i-1];
-      offsetd = ((start+1)/2*17);
-      offd[i] -= offsetd;
-      int j = 0;
-//      while (j < offd[i]) {
-//        dbufd[*outsize+j] = dbufd[offsetd+j];
-//        j++;
-//      }
-      memcpy(dbufd+*outsize, dbufd+offsetd, offd[j]*sizeof(uchar));
-      *outsize += offd[i];
+  for (int i = 0; i < blocksd*warpsblockd; i++) {
+    int offsetd, start = 0;
+    if (i > 0) start = cutd[i-1];
+    offsetd = ((start+1)/2*17);
+    offd[i] -= offsetd;
+    int j = 0;
+//    while (j < offd[i]) {
+//      dbufd[*outsize+j] = dbufd[offsetd+j];
+//      j++;
+//    }
+    int peroff = offd[i] / (WARPS_BLOCK * WARPSIZE);
+    int offdest = *outsize + peroff * tid;
+    int offsrc = offsetd + peroff * tid;
+
+    if (tid == WARPS_BLOCK * WARPSIZE - 1) { // final peroff
+      peroff = offd[i] - peroff * (WARPS_BLOCK * WARPSIZE - 1);
     }
+
+    memcpy(dbufd+offdest, dbufd+offsrc, peroff*sizeof(uchar));
+    *outsize += offd[i];
   }
 }
 
@@ -885,7 +891,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
       // determine chunk assignments per warp
       std::vector<int> cuts(BLOCKS*WARPS_BLOCK);
-      int per = (m_doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
+      int per = (m_doubles + BLOCKS*WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
       if (per < WARPSIZE) per = WARPSIZE;
       per = (per + WARPSIZE - 1) & -WARPSIZE;
       int curr = 0, before = 0, d = 0;
