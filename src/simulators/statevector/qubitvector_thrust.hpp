@@ -220,9 +220,10 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
   for (int i = 0; i < warp; i++) {
     offdest += offd[i];
   }
-  printf("offdest %d\n", offdest);
-  printf("offsrc %d\n", offsrc);
   if (lane == 31) {
+    printf("start merging \n")
+    printf("offdest %d\n", offdest);
+    printf("offsrc %d\n", offsrc);
     memcpy(dbufd + offdest, dbufd + offsrc, offd[warp] * sizeof(uchar));
   }
   if (warp == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest + offd[warp];
