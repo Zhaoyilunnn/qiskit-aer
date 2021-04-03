@@ -1055,7 +1055,7 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
   std::cout << "Compression done" << std::endl;
 
 //  MergeOutput<<<4, 126, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
-  MergeOutput<<<4, 126, 0, stream>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos),
+  MergeOutput<<<28, 16, 0, stream>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos),
                                      dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
 
   // merge output
