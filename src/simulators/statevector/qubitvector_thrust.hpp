@@ -195,6 +195,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 
 __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
+  printf("merge start");
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   int offsrc, offdest, start = 0;
 
