@@ -1038,7 +1038,7 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
   CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
 
-  MergeOutput<<<1, WARPSIZE*WARPS_BLOCK, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
+  MergeOutput<<<1, BLOCKS*WARPS_BLOCK, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
 
   // merge output
 //  MergeOutput<<<1,1,0,stream>>>(dbuf,
