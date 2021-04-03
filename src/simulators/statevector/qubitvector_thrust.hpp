@@ -84,8 +84,8 @@ double mysecond()
 #define AER_MAX_GPU_BUFFERS   64
 #define AER_NUM_STREAM        2
 
-#define BLOCKS                56
-#define WARPS_BLOCK           36
+#define BLOCKS                28
+#define WARPS_BLOCK           18
 #define DIM_COMPRESS          2
 
 #define uchar unsigned char
@@ -1048,7 +1048,7 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
   CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
 
-  MergeOutput<<<1, BLOCKS*WARPS_BLOCK, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
+  MergeOutput<<<4, 126, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
 
   // merge output
 //  MergeOutput<<<1,1,0,stream>>>(dbuf,
