@@ -203,10 +203,11 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
       offsetd = ((start+1)/2*17);
       offd[i] -= offsetd;
       int j = 0;
-      while (j < offd[i]) {
-        dbufd[*outsize+j] = dbufd[offsetd+j];
-        j++;
-      }
+//      while (j < offd[i]) {
+//        dbufd[*outsize+j] = dbufd[offsetd+j];
+//        j++;
+//      }
+      memcpy(dbufd+*outsize, dbufd+offsetd, offd[j]*sizeof(uchar));
       *outsize += offd[i];
     }
   }
