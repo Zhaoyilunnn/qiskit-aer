@@ -196,27 +196,15 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
-  for (int i = 0; i < blocksd*warpsblockd; i++) {
-    int offsetd, start = 0;
-    if (i > 0) start = cutd[i-1];
-    offsetd = ((start+1)/2*17);
-    offd[i] -= offsetd;
-    int j = 0;
-//    while (j < offd[i]) {
-//      dbufd[*outsize+j] = dbufd[offsetd+j];
-//      j++;
-//    }
-    int peroff = offd[i] / (WARPS_BLOCK * WARPSIZE);
-    int offdest = *outsize + peroff * tid;
-    int offsrc = offsetd + peroff * tid;
-
-    if (tid == WARPS_BLOCK * WARPSIZE - 1) { // final peroff
-      peroff = offd[i] - peroff * (WARPS_BLOCK * WARPSIZE - 1);
-    }
-
-    memcpy(dbufd+offdest, dbufd+offsrc, peroff*sizeof(uchar));
-    *outsize += offd[i];
+  int offsrc, offdest, start = 0;
+  if (tid > 0) start = cutd[tid-1];
+  offsrc = ((start+1)/2*17);
+  offd[tid] -= offsrc;
+  for (int j = 0; j < tid; j++) {
+    offdest += offd[j];
   }
+  memcpy(dbufd+offdest, dbufd+offsrc, offd[tid]*sizeof(uchar));
+  if (tid == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest + offd[tid];
 }
 
 /************************************************************************************/
