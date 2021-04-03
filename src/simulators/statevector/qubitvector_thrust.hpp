@@ -187,7 +187,10 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   }
 
   // save final value of off, which is total bytes of compressed output for this chunk
-  if (lane == 31) offd[warp] = off;
+  if (lane == 31) {
+    offd[warp] = off;
+    printf("offdcompress: %d\n", offd[warp]);
+  }
 
 //  cudaDeviceSynchronize();
 //
@@ -203,7 +206,7 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
     if (j > 0) start = cutd[j-1];
     offsrc = ((start+1)/2*17);
     offd[j] -= offsrc;
-    printf("%d\n", offd[j]);
+    printf("offdmerge %d\n", offd[j]);
     offdest += offd[j];
   }
   printf("offdest %d\n", offdest);
