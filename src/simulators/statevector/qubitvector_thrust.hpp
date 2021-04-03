@@ -203,6 +203,7 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
     if (j > 0) start = cutd[j-1];
     offsrc = ((start+1)/2*17);
     offd[j] -= offsrc;
+    printf("%d\n", offd[j]);
     offdest += offd[j];
   }
   printf("offdest %d\n", offdest);
