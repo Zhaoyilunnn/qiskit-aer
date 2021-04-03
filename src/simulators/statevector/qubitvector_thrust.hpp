@@ -779,7 +779,7 @@ public:
   int AllocateParameters(int bits);
 
   // Compression and decompression
-  ull Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, cudaStream_t stream);
+  ull Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, ull* outsize,cudaStream_t stream);
 //  void Decompression(uint_t bufSrc, int chunkBits, int nChunks, ull* fbuf, int* cut, cudaStream_t stream);
   int GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, int chunkBits, cudaStream_t stream);
   int PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc, int chunkBits, uint_t size,cudaStream_t stream);
@@ -1044,7 +1044,7 @@ int QubitVectorChunkContainer<data_t>::AllocateParameters(int bits)
 // Compression
 template <typename data_t>
 ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits, int nChunks,
-                                                      uchar* dbuf, int* cut, int* off,
+                                                      uchar* dbuf, int* cut, int* off, ull* outsize,
                                                       cudaStream_t stream)
 {
   ull res = 0;
@@ -1066,6 +1066,9 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
 //  MergeOutput<<<4, 126, 0, stream>>>(dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
   MergeOutput<<<BLOCKS, WARPS_BLOCK, 0, stream>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPosOff),
                                      dbuf, cut, off, m_pCsize->BufferPtr()+bufSrc);
+
+  *outsize = m_pCsize->Get(bufSrc);
+  std::cout << "Compressed size: " << *outsize << std::endl;
 
   // merge output
 //  MergeOutput<<<1,1,0,stream>>>(dbuf,
@@ -2988,7 +2991,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       uchar* dbuf = m_Chunks[iPlace].GetDbuf();
       int* cut = m_Chunks[iPlace].GetCut();
       int* off = m_Chunks[iPlace].GetOff();
-      thrust::host_vector<ull> vCsize(nGPUBuffer, 0);
+      std::vector<ull> vCsize(nGPUBuffer, 0);
 //      ull csize = 0;
 
       noDataExchange = 0;                                         // do not enable noDataExchange
@@ -3100,7 +3103,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               //copy back
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
-                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
+                m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, &vCsize[i], m_Streams[iStream+2]);
 //                vCsize[i] = m_Chunks[iPlace].GetCsize(i);
 //                std::cout << outSizeACP[i] << std::endl;
               }
@@ -3154,7 +3157,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           //copy back
 
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
-            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
+            m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, &vCsize[i], m_Streams[iStream+2]);
 //            vCsize[i] = m_Chunks[iPlace].GetCsize(i);
 ////            std::cout << outSizeACP[i] << std::endl;
           }
