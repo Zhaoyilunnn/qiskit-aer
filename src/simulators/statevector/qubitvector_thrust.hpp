@@ -3101,10 +3101,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
                 m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
+                vCsize[i] = m_Chunks[iPlace].GetCsize(i);
 //                std::cout << outSizeACP[i] << std::endl;
               }
-              m_Chunks[iPlace].CopyCsizeOut(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
-                                            iStream*nGPUBufferPerStream, nGPUBufferPerStream);
+//              m_Chunks[iPlace].CopyCsizeOut(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
+//                                            iStream*nGPUBufferPerStream, nGPUBufferPerStream);
 
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
@@ -3154,10 +3155,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
             m_Chunks[iPlace].Compression(i, chunkBits, 1, dbuf, cut, off, m_Streams[iStream+2]);
+            vCsize[i] = m_Chunks[iPlace].GetCsize(i);
 ////            std::cout << outSizeACP[i] << std::endl;
           }
-          m_Chunks[iPlace].CopyCsizeOut(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
-                                        iStream*nGPUBufferPerStream, nGPUBufferPerStream);
+//          m_Chunks[iPlace].CopyCsizeOut(thrust::raw_pointer_cast(vCsize.data()+iStream*nGPUBufferPerStream),
+//                                        iStream*nGPUBufferPerStream, nGPUBufferPerStream);
 
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
