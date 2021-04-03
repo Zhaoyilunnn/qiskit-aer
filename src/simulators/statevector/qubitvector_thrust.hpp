@@ -84,7 +84,7 @@ double mysecond()
 #define AER_MAX_GPU_BUFFERS   64
 #define AER_NUM_STREAM        2
 
-#define BLOCKS                28
+#define BLOCKS                1024
 #define WARPS_BLOCK           18
 #define DIM_COMPRESS          2
 
@@ -95,8 +95,6 @@ double mysecond()
 #define WARPSIZE 32
 
 __constant__ int dimensionalityd; // dimensionality parameter
-__constant__ int blocksd = 16;
-__constant__ int warpsblockd = 8;
 
 //__device__ __constant__ ull *cbufd[AER_NUM_STREAM]; // ptr to uncompressed data
 //__device__ __constant__ unsigned char *dbufd[AER_NUM_STREAM]; // ptr to compressed data for compression
