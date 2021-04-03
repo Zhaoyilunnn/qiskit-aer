@@ -216,7 +216,7 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 //  }
   offsrc = tid > 0 ? (cutd[tid-1]+1)/2*17 : 0;
   for (int i = 0; i < tid; i++) {
-    offdest += off[i];
+    offdest += offd[i];
   }
   printf("offdest %d\n", offdest);
   printf("offsrc %d\n", offsrc);
