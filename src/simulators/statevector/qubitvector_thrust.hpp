@@ -205,6 +205,7 @@ __global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
   printf("merge start\n");
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  printf("thread id %d\n", tid);
   int offsrc, offdest, start = 0;
 
 //  for (int j = 0; j < tid+1; j++) {
