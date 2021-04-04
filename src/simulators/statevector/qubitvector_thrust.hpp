@@ -202,7 +202,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
     } else {
       offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off;
     }
-    printf("offdcompress: %d\n", offd[warp]);
+    printf("offdcompress: %d\n", offd[warp + chunk*BLOCKS*WARPS_BLOCK]);
   }
 
   /*// finish compression and start merge compressed data
