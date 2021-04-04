@@ -976,7 +976,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 
       m_pCut = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
       m_pDbuf = new QubitVectorHostBuffer<uchar>((m_doubles+1)/2*17);
-      m_pOff = new QubitVectorHostBuffer<int>(AER_MAX_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
+      m_pOff = new QubitVectorHostBuffer<int>(AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
 
       std::vector<int> cuts(BLOCKS*WARPS_BLOCK);
       int per = (m_doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
@@ -1216,8 +1216,8 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::PutOffset(QubitVectorChunkContainer &chunks, uint_t dest, cudaStream_t stream)
 {
-  cudaMemcpyAsync(chunks.m_pOff->BufferPtr()+AER_HALF_GPU_BUFFERS*dest*BLOCKS*WARPS_BLOCK,
-                  m_pOff->BufferPtr(), AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK * sizeof(int),
+  cudaMemcpyAsync(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(),
+                  AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK * sizeof(int),
                   cudaMemcpyDeviceToHost, stream);
 
   return 0;
