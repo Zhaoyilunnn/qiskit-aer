@@ -199,10 +199,10 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
     if (warp > 0) {
 //      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - (cutd[warp + chunk*BLOCKS*WARPS_BLOCK-1]+1)/2*17;
       offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - ((warp-1)*PER_CUT+1)/2*17;
+      printf("offdcompress: %d\n", offd[warp + chunk*BLOCKS*WARPS_BLOCK]);
     } else {
       offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off;
     }
-    printf("offdcompress: %d\n", offd[warp + chunk*BLOCKS*WARPS_BLOCK]);
   }
 
   /*// finish compression and start merge compressed data
