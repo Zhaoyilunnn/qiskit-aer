@@ -1217,9 +1217,14 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 template <typename data_t>
 int QubitVectorChunkContainer<data_t>::PutOffset(QubitVectorChunkContainer &chunks, uint_t dest, cudaStream_t stream)
 {
-  cudaMemcpyAsync(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(),
+  /*cudaMemcpyAsync(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(),
                   AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK * sizeof(int),
-                  cudaMemcpyDeviceToHost, stream);
+                  cudaMemcpyDeviceToHost, stream);*/
+
+  cudaMemcpy(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(),
+             AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK * sizeof(int),
+             cudaMemcpyDeviceToHost);
+
 
   return 0;
 }
