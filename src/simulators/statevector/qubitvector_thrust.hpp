@@ -1173,24 +1173,39 @@ template <typename data_t>
 int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc,
                                                      int chunkBits, uint_t size,cudaStream_t stream)
 {
-  uint_t destPos_off, destPos_dbuf;
+  /*uint_t destPos_off, destPos_dbuf;
   bufsrc &= (AER_HALF_GPU_BUFFERS-1);
   bufsrc <<= chunkBits;
   destPos_off = dest << chunkBits;
   destPos_dbuf = destPos_off + BLOCKS*WARPS_BLOCK*sizeof(int) / sizeof(data_t);
   std::cout << "Off position: " << destPos_off << std::endl;
-  std::cout << "Dbuf position: " << destPos_dbuf << std::endl;
+  std::cout << "Dbuf position: " << destPos_dbuf << std::endl;*/
+
+  uint_t deststart, srcstart;
+  deststart = dest << chunkBits;
+  srcstart = bufsrc << chunkBits;
+
+  uint_t offstart = bufsrc & (AER_HALF_GPU_BUFFERS-1) * BLOCKS * WARPS_BLOCK;
+
   int* offadress = chunks.m_pOff->BufferPtr();
   // currently we only support copying to host
   if(m_iDevice >= 0 && chunks.DeviceID() < 0){
     std::cout << "Start copying compressed data" << std::endl;
 
-    for (int i = bufsrc; i < bufsrc + (1ull<<chunkBits); i += (PER_CUT/2)) {
+    /*for (int i = bufsrc; i < bufsrc + (1ull<<chunkBits); i += (PER_CUT/2)) {
       std::cout << "Bound: " << i/(PER_CUT/2) << std::endl;
       std::cout << "Offset: " << chunks.m_pOff->Get(i/(PER_CUT/2)) << std::endl;
       cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_off+i),
                       reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+i),
                       offadress[i / (PER_CUT/2)] * sizeof(uchar),
+                      cudaMemcpyDeviceToHost, stream);
+    }*/
+    for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
+      std::cout << "Bound: " << i << std::endl;
+      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
+      cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
+                      reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcstart+(i-offstart)*PER_CUT/2),
+                      offadress[i] * sizeof(uchar),
                       cudaMemcpyDeviceToHost, stream);
     }
 
