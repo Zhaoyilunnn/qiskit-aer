@@ -1180,7 +1180,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
   destPos_dbuf = destPos_off + BLOCKS*WARPS_BLOCK*sizeof(int) / sizeof(data_t);
   std::cout << "Off position: " << destPos_off << std::endl;
   std::cout << "Dbuf position: " << destPos_dbuf << std::endl;
-
+  int* offadress = chunks.m_pOff->BufferPtr();
   // currently we only support copying to host
   if(m_iDevice >= 0 && chunks.DeviceID() < 0){
     std::cout << "Start copying compressed data" << std::endl;
@@ -1190,7 +1190,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
       std::cout << "Offset: " << chunks.m_pOff->Get(i/(PER_CUT/2)) << std::endl;
       cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_off+i),
                       reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+i),
-                      chunks.m_pOff->Get(i / (PER_CUT/2)) * sizeof(uchar),
+                      offadress[i / (PER_CUT/2)] * sizeof(uchar),
                       cudaMemcpyDeviceToHost, stream);
     }
 
