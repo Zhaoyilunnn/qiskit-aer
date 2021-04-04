@@ -1202,8 +1202,8 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
                       cudaMemcpyDeviceToHost, stream);
     }*/
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
-      std::cout << "Bound: " << i << std::endl;
-      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
+//      std::cout << "Bound: " << i << std::endl;
+//      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
       cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
                       reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcstart+(i-offstart)*PER_CUT/2),
                       offadress[i] * sizeof(uchar),
