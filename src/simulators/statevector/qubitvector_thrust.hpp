@@ -123,7 +123,9 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   // warp id
 //  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
   warp = ((threadIdx.x + blockIdx.x * blockDim.x) & (AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK*WARPSIZE)) / WARPSIZE;
+  printf("Warp %d\n", warp);
   chunk = (threadIdx.x + blockIdx.x * blockDim.x) / BLOCKS*WARPS_BLOCK*WARPSIZE;
+  printf("Chunk %llu\n", chunk);
   // prediction index within previous subchunk
   offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
 
