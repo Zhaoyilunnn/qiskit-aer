@@ -85,6 +85,7 @@ double mysecond()
 #define AER_HALF_GPU_BUFFERS  32
 #define AER_NUM_STREAM        2
 
+// BLOCKS * WARPS_BLOCK * PER_CUT = 2 * (1ull << AER_CHUNK_BITS)
 #define BLOCKS                8
 #define WARPS_BLOCK           4
 #define PER_CUT               131072
@@ -201,7 +202,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
     } else {
       offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off;
     }
-//    printf("offdcompress: %d\n", offd[warp]);
+    printf("offdcompress: %d\n", offd[warp]);
   }
 
   /*// finish compression and start merge compressed data
