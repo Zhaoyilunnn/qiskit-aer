@@ -82,6 +82,7 @@ double mysecond()
 #define AER_CHUNK_BITS        21
 #define AER_MAX_BUFFERS       2
 #define AER_MAX_GPU_BUFFERS   64
+#define AER_HALF_GPU_BUFFERS  32
 #define AER_NUM_STREAM        2
 
 #define BLOCKS                28
@@ -108,7 +109,7 @@ __constant__ int dimensionalityd; // dimensionality parameter
 
 __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd)
 {
-  int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term;
+  int offset, code, bcount, tmp, off, beg, end, lane, warp, iindex, lastidx, start, term, chunk;
   ull diff, prev;
   __shared__ int ibufs[32 * (3 * WARPSIZE / 2)]; // shared space for prefix sum
 
@@ -120,7 +121,9 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   iindex += WARPSIZE / 2;
   lastidx = (threadIdx.x / WARPSIZE + 1) * (3 * WARPSIZE / 2) - 1;
   // warp id
-  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
+//  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
+  warp = ((threadIdx.x + blockIdx.x * blockDim.x) & (AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK*WARPSIZE)) / WARPSIZE;
+  chunk = (threadIdx.x + blockIdx.x * blockDim.x) / BLOCKS*WARPS_BLOCK*WARPSIZE;
   // prediction index within previous subchunk
   offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
 
@@ -134,7 +137,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   for (int i = start + lane; i < term; i += WARPSIZE) {
     // calculate delta between value to compress and prediction
     // and negate if negative
-    diff = cbufd[i] - prev;
+    diff = cbufd[i+2*chunk*(1ull<<AER_CHUNK_BITS)] - prev;
     code = (diff >> 60) & 8;
     if (code != 0) {
       diff = -diff;
@@ -159,7 +162,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
     __threadfence_block();
 
     // write out non-zero bytes of delta to compressed buffer
-    beg = off + (WARPSIZE/2) + ibufs[iindex-1];
+    beg = off + (WARPSIZE/2) + ibufs[iindex-1] + chunk*(2*(1ull<<AER_CHUNK_BITS)+1)/2*17;
     end = beg + bcount;
     for (; beg < end; beg++) {
       dbufd[beg] = diff;
@@ -175,13 +178,13 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
     // write out half-bytes of sign and leading-zero-byte count (every other thread
     // writes its half-byte and neighbor's half-byte)
     if ((lane & 1) != 0) {
-      dbufd[off + (lane >> 1)] = ibufs[iindex-1] | (code << 4);
+      dbufd[off + (lane >> 1) + chunk*(2*(1ull<<AER_CHUNK_BITS)+1)/2*17] = ibufs[iindex-1] | (code << 4);
     }
     off += tmp + (WARPSIZE/2);
 
     // save prediction value from this subchunk (based on provided dimensionality)
     // for use in next subchunk
-    prev = cbufd[i + offset];
+    prev = cbufd[i+2*chunk*(1ull<<AER_CHUNK_BITS) + offset];
   }
 
   // save final value of off, which is total bytes of compressed output for this chunk
@@ -199,11 +202,11 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 //
 }
 
-__global__ void SetOffsetTable(int* cbufd, int* offd)
-{
-  int tid = threadIdx.x + blockIdx.x * blockDim.x;
-  cbufd[tid] = offd[tid];
-}
+//__global__ void SetOffsetTable(int* cbufd, int* offd)
+//{
+//  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+//  cbufd[tid] = offd[tid];
+//}
 
 //__global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
 __global__ void MergeOutput(uchar*cbufd, uchar* dbufd, int* cutd, int* offd, ull* outsize)
@@ -1054,7 +1057,7 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
   // Compression before copying back to CPU
 //  if (size >= 32) {// temporally set this TODO: fix this
 //    size = m_pChunks->Compress(srcPos, size, stream, iStream);
-  CompressionKernel<<<BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
+  CompressionKernel<<<AER_HALF_GPU_BUFFERS*BLOCKS, WARPSIZE*WARPS_BLOCK, 0, stream>>>(reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
                                                                  dbuf, cut, off);
   CudaTest("compression kernel launch failed");
   std::cout << "Compression done" << std::endl;
