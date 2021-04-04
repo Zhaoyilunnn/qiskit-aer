@@ -976,7 +976,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 
       m_pCut = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
       m_pDbuf = new QubitVectorHostBuffer<uchar>((m_doubles+1)/2*17);
-      m_pOff = new QubitVectorHostBuffer<int>(BLOCKS*WARPS_BLOCK);
+      m_pOff = new QubitVectorHostBuffer<int>(AER_MAX_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
 
       std::vector<int> cuts(BLOCKS*WARPS_BLOCK);
       int per = (m_doubles + BLOCKS*WARPS_BLOCK * WARPS_BLOCK - 1) / (BLOCKS*WARPS_BLOCK);
