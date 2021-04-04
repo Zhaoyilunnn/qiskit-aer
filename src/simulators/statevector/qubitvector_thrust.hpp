@@ -99,15 +99,6 @@ double mysecond()
 
 __constant__ int dimensionalityd; // dimensionality parameter
 
-//__device__ __constant__ ull *cbufd[AER_NUM_STREAM]; // ptr to uncompressed data
-//__device__ __constant__ unsigned char *dbufd[AER_NUM_STREAM]; // ptr to compressed data for compression
-//__device__ __constant__ unsigned char *dbufdd; // ptr to compressed data for decompression
-//__device__ __constant__ ull *fbufd; // ptr to decompressed data
-//__device__ __constant__ int *cutd; // ptr to chunk boundaries for compression
-//__device__ __constant__ int *cutdd; // ptr to chunk boundaries for decompression
-//__device__ __constant__ int *offd[AER_NUM_STREAM]; // ptr to chunk offsets after compression
-
-
 
 __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd)
 {
@@ -205,25 +196,6 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   }
 
 //  printf("offdcompress: %d\n", offd[warp + chunk*BLOCKS*WARPS_BLOCK]);
-  /*// finish compression and start merge compressed data
-  __syncthreads();
-  //  printf("merge start\n");
-//  int tid = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
-//  printf("tid id %d\n", tid);
-  int offdest[AER_HALF_GPU_BUFFERS*WARPS_BLOCK*BLOCKS] = {0};
-
-  for (int i = 0; i < warp; i++) {
-    offdest[warp+chunk*BLOCKS*WARPS_BLOCK] += offd[i + chunk*BLOCKS*WARPS_BLOCK];
-  }
-//  printf("start merging \n");
-//  printf("offdest %d\n", offdest[warp]);
-//  memcpy(dbufd + offdest[warp], dbufd + (warp > 0 ? (cutd[warp-1]+1)/2*17 : 0), offd[warp] * sizeof(uchar));
-  memcpy((uchar*)cbufd + offdest[warp+chunk*BLOCKS*WARPS_BLOCK],
-         dbufd + (warp > 0 ? ((warp+chunk*BLOCKS*WARPS_BLOCK-1)*PER_CUT + 1)/2*17 : chunk*BLOCKS*WARPS_BLOCK),
-         offd[warp+chunk*BLOCKS*WARPS_BLOCK] * sizeof(uchar));
-//  if (warp == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest[warp] + offd[warp];
-*/
-
 }
 
 //__global__ void SetOffsetTable(int* cbufd, int* offd)
@@ -233,22 +205,17 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 //}
 
 //__global__ void MergeOutput(uchar* dbufd, int* cutd, int* offd, ull* outsize)
-__global__ void MergeOutput(uchar*cbufd, uchar* dbufd, int* cutd, int* offd, ull* outsize)
+/*__global__ void MergeOutput(uchar*cbufd, uchar* dbufd, int* cutd, int* offd, ull* outsize)
 {
-//  printf("merge start\n");
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
-//  printf("tid id %d\n", tid);
   int offdest[WARPS_BLOCK*BLOCKS] = {0};
 
   for (int i = 0; i < tid; i++) {
     offdest[tid] += offd[i];
   }
-//  printf("start merging \n");
-//  printf("offdest %d\n", offdest[tid]);
-//  memcpy(dbufd + offdest[tid], dbufd + (tid > 0 ? (cutd[tid-1]+1)/2*17 : 0), offd[tid] * sizeof(uchar));
   memcpy(cbufd + offdest[tid], dbufd + (tid > 0 ? (cutd[tid-1]+1)/2*17 : 0), offd[tid] * sizeof(uchar));
   if (tid == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest[tid] + offd[tid];
-}
+}*/
 
 /************************************************************************************/
 
@@ -1174,14 +1141,6 @@ template <typename data_t>
 int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest,uint_t bufsrc,
                                                      int chunkBits, uint_t size,cudaStream_t stream)
 {
-  /*uint_t destPos_off, destPos_dbuf;
-  bufsrc &= (AER_HALF_GPU_BUFFERS-1);
-  bufsrc <<= chunkBits;
-  destPos_off = dest << chunkBits;
-  destPos_dbuf = destPos_off + BLOCKS*WARPS_BLOCK*sizeof(int) / sizeof(data_t);
-  std::cout << "Off position: " << destPos_off << std::endl;
-  std::cout << "Dbuf position: " << destPos_dbuf << std::endl;*/
-
   uint_t deststart, srcstart;
   deststart = dest << chunkBits;
   srcstart = bufsrc << chunkBits;
@@ -1191,16 +1150,8 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
   int* offadress = chunks.m_pOff->BufferPtr();
   // currently we only support copying to host
   if(m_iDevice >= 0 && chunks.DeviceID() < 0){
-    std::cout << "Start copying compressed data" << std::endl;
+//    std::cout << "Start copying compressed data" << std::endl;
 
-    /*for (int i = bufsrc; i < bufsrc + (1ull<<chunkBits); i += (PER_CUT/2)) {
-      std::cout << "Bound: " << i/(PER_CUT/2) << std::endl;
-      std::cout << "Offset: " << chunks.m_pOff->Get(i/(PER_CUT/2)) << std::endl;
-      cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_off+i),
-                      reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+i),
-                      offadress[i / (PER_CUT/2)] * sizeof(uchar),
-                      cudaMemcpyDeviceToHost, stream);
-    }*/
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
 //      std::cout << "Bound: " << i << std::endl;
 //      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
@@ -1210,21 +1161,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
                       cudaMemcpyDeviceToHost, stream);
     }
 
-/*
-//    cudaMemcpy(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(), BLOCKS*WARPS_BLOCK*sizeof(int), cudaMemcpyDeviceToHost);
-//    for (int i = 0; i < 504; i++) {
-//      std::cout << chunks.m_pOff[iStream]->Get(i) << std::endl;
-//    }
-//    std::cout << "Copying off done" << std::endl;
-//    cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_dbuf),
-//                    m_pDbuf->BufferPtr(), sizeof(uchar)* size,
-//                    cudaMemcpyDeviceToHost, stream);
-    cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_off),
-                    m_pDbuf->BufferPtr(), (BLOCKS*WARPS_BLOCK)*sizeof(int)+sizeof(uchar)* size,
-                    cudaMemcpyDeviceToHost, stream);
-*/
-
-    std::cout << "Copying back done" << std::endl;
+//    std::cout << "Copying back done" << std::endl;
   }
 
   return 0;
