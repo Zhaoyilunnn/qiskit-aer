@@ -123,9 +123,9 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   // warp id
 //  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
   warp = ((threadIdx.x + blockIdx.x * blockDim.x) & (BLOCKS*WARPS_BLOCK*WARPSIZE-1)) / WARPSIZE;
-  printf("Warp %d\n", warp);
+//  printf("Warp %d\n", warp);
   chunk = (threadIdx.x + blockIdx.x * blockDim.x) / (BLOCKS*WARPS_BLOCK*WARPSIZE);
-  printf("Chunk %llu\n", chunk);
+//  printf("Chunk %llu\n", chunk);
   // prediction index within previous subchunk
   offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
 
@@ -193,9 +193,9 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   if (lane == 31) {
 //    offd[warp] = off;
     if (warp > 0) {
-      offd[warp] = off - (cutd[warp-1]+1)/2*17;
+      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - (cutd[warp-1]+1)/2*17;
     } else {
-      offd[warp] = off;
+      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off;
     }
 //    printf("offdcompress: %d\n", offd[warp]);
   }
