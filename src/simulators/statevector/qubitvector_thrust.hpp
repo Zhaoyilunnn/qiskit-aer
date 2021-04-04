@@ -898,7 +898,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 //      m_pDbufD = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
 
       m_pDbuf = new QubitVectorDeviceBuffer<uchar>(AER_HALF_GPU_BUFFERS*(m_doubles+1)/2*17);
-      m_pOff = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
+      m_pOff = new QubitVectorDeviceBuffer<int>(AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
 
       // calculate required padding for last chunk
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
