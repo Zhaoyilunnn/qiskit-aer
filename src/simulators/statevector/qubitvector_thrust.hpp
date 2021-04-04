@@ -122,7 +122,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   lastidx = (threadIdx.x / WARPSIZE + 1) * (3 * WARPSIZE / 2) - 1;
   // warp id
 //  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
-  warp = ((threadIdx.x + blockIdx.x * blockDim.x) & (BLOCKS*WARPS_BLOCK*WARPSIZE)) / WARPSIZE;
+  warp = ((threadIdx.x + blockIdx.x * blockDim.x) & (BLOCKS*WARPS_BLOCK*WARPSIZE-1)) / WARPSIZE;
   printf("Warp %d\n", warp);
   chunk = (threadIdx.x + blockIdx.x * blockDim.x) / (BLOCKS*WARPS_BLOCK*WARPSIZE);
   printf("Chunk %llu\n", chunk);
