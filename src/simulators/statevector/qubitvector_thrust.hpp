@@ -218,7 +218,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 //  printf("offdest %d\n", offdest[warp]);
 //  memcpy(dbufd + offdest[warp], dbufd + (warp > 0 ? (cutd[warp-1]+1)/2*17 : 0), offd[warp] * sizeof(uchar));
   memcpy((uchar*)cbufd + offdest[warp+chunk*BLOCKS*WARPS_BLOCK],
-         dbufd + (warp > 0 ? ((warp+chunk*BLOCKS*WARPS_BLOCK-1)*PER_CUT + 1)/2*17 : 0),
+         dbufd + (warp > 0 ? ((warp+chunk*BLOCKS*WARPS_BLOCK-1)*PER_CUT + 1)/2*17 : chunk*BLOCKS*WARPS_BLOCK),
          offd[warp+chunk*BLOCKS*WARPS_BLOCK] * sizeof(uchar));
 //  if (warp == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest[warp] + offd[warp];
 
