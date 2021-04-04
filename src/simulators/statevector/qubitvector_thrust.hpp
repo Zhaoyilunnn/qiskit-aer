@@ -1186,7 +1186,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
     std::cout << "Start copying compressed data" << std::endl;
 
     for (int i = bufsrc; i < bufsrc + (1ull<<chunkBits); i += (PER_CUT/2)) {
-      cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunk->BufferPtr()+destPos_off+i),
+      cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+destPos_off+i),
                       reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+i),
                       chunks.m_pOff->Get(i / (PER_CUT/2)) * sizeof(uchar),
                       cudaMemcpyDeviceToHost, stream);
