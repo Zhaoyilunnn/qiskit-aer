@@ -134,9 +134,9 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   // determine start and end of chunk to compress
   start = 0;
 //  if (warp > 0) start = cutd[warp + chunk*BLOCKS*WARPS_BLOCK-1];
-  if (warp > 0) start = (warp-1)*PER_CUT;
+  if (warp > 0) start = warp*PER_CUT;
 //  term = cutd[warp + chunk*BLOCKS*WARPS_BLOCK];
-  term = warp*PER_CUT;
+  term = (warp+1)*PER_CUT;
   off = ((start+1)/2*17);
 
   prev = 0;
