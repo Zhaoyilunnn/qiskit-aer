@@ -204,8 +204,25 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 //    printf("offdcompress: %d\n", offd[warp]);
   }
 
-//  cudaDeviceSynchronize();
-//
+  // finish compression and start merge compressed data
+  __syncthreads();
+  //  printf("merge start\n");
+//  int tid = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
+//  printf("tid id %d\n", tid);
+  int offdest[AER_HALF_GPU_BUFFERS*WARPS_BLOCK*BLOCKS] = {0};
+
+  for (int i = 0; i < warp; i++) {
+    offdest[warp+chunk*BLOCKS*WARPS_BLOCK] += offd[i + chunk*BLOCKS*WARPS_BLOCK];
+  }
+//  printf("start merging \n");
+//  printf("offdest %d\n", offdest[warp]);
+//  memcpy(dbufd + offdest[warp], dbufd + (warp > 0 ? (cutd[warp-1]+1)/2*17 : 0), offd[warp] * sizeof(uchar));
+  memcpy((uchar*)cbufd + offdest[warp+chunk*BLOCKS*WARPS_BLOCK],
+         dbufd + (warp > 0 ? ((warp+chunk*BLOCKS*WARPS_BLOCK-1)*PER_CUT + 1)/2*17 : 0),
+         offd[warp+chunk*BLOCKS*WARPS_BLOCK] * sizeof(uchar));
+//  if (warp == BLOCKS*WARPS_BLOCK - 1) *outsize = offdest[warp] + offd[warp];
+
+
 }
 
 //__global__ void SetOffsetTable(int* cbufd, int* offd)
