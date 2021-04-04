@@ -85,8 +85,8 @@ double mysecond()
 #define AER_HALF_GPU_BUFFERS  32
 #define AER_NUM_STREAM        2
 
-#define BLOCKS                32
-#define WARPS_BLOCK           16
+#define BLOCKS                8
+#define WARPS_BLOCK           4
 #define PER_CUT               8192
 #define DIM_COMPRESS          2
 
@@ -1201,8 +1201,8 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
                       cudaMemcpyDeviceToHost, stream);
     }*/
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
-      std::cout << "Bound: " << i << std::endl;
-      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
+//      std::cout << "Bound: " << i << std::endl;
+//      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
       cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
                       reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcstart+(i-offstart)*PER_CUT/2),
                       offadress[i] * sizeof(uchar),
