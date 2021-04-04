@@ -85,8 +85,9 @@ double mysecond()
 #define AER_HALF_GPU_BUFFERS  32
 #define AER_NUM_STREAM        2
 
-#define BLOCKS                28
-#define WARPS_BLOCK           18
+#define BLOCKS                32
+#define WARPS_BLOCK           16
+#define PER_CUT               8192
 #define DIM_COMPRESS          2
 
 #define uchar unsigned char
@@ -131,8 +132,10 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 
   // determine start and end of chunk to compress
   start = 0;
-  if (warp > 0) start = cutd[warp-1];
-  term = cutd[warp];
+//  if (warp > 0) start = cutd[warp + chunk*BLOCKS*WARPS_BLOCK-1];
+  if (warp > 0) start = (warp + chunk*BLOCKS*WARPS_BLOCK-1)*PER_CUT;
+//  term = cutd[warp + chunk*BLOCKS*WARPS_BLOCK];
+  term = (warp + chunk*BLOCKS*WARPS_BLOCK)*PER_CUT;
   off = ((start+1)/2*17);
 
   prev = 0;
@@ -193,7 +196,8 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
   if (lane == 31) {
 //    offd[warp] = off;
     if (warp > 0) {
-      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - (cutd[warp-1]+1)/2*17;
+//      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - (cutd[warp + chunk*BLOCKS*WARPS_BLOCK-1]+1)/2*17;
+      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - ((warp + chunk*BLOCKS*WARPS_BLOCK-1)*PER_CUT+1)/2*17;
     } else {
       offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off;
     }
