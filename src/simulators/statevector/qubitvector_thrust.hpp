@@ -961,7 +961,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       int curr = 0, before = 0, d = 0;
       for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
         curr += per;
-        cuts[i] = min(curr, m_doubles);
+        cuts[i] = min(curr, (int)m_doubles);
         if (cuts[i] - before > 0) {
           d = cuts[i] - before;
         }
