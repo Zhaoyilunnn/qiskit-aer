@@ -85,8 +85,8 @@ double mysecond()
 #define AER_HALF_GPU_BUFFERS  32
 #define AER_NUM_STREAM        2
 
-#define BLOCKS                8
-#define WARPS_BLOCK           4
+#define BLOCKS                1
+#define WARPS_BLOCK           1
 #define PER_CUT               8192
 #define DIM_COMPRESS          2
 
