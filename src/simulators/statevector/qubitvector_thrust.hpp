@@ -1080,7 +1080,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
   // currently we only support copying to host
   if(m_iDevice >= 0 && chunks.DeviceID() < 0){
 //    std::cout << "Start copying compressed data" << std::endl;
-    // TODO: fix position of src and dest
+    // TODO: fix position of src and dest, fix src, not m_pChunks
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
 //      std::cout << "Bound: " << i << std::endl;
 //      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
