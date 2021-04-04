@@ -198,7 +198,7 @@ __global__ void CompressionKernel(ull* cbufd, uchar* dbufd, int* cutd, int* offd
 //    offd[warp] = off;
     if (warp > 0) {
 //      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - (cutd[warp + chunk*BLOCKS*WARPS_BLOCK-1]+1)/2*17;
-      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - ((warp-1)*PER_CUT+1)/2*17;
+      offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off - (warp*PER_CUT+1)/2*17;
     } else {
       offd[warp + chunk*BLOCKS*WARPS_BLOCK] = off;
     }
