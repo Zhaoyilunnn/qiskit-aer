@@ -1054,6 +1054,7 @@ template <typename data_t>
 int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, uint_t dest,
                                                      int chunkBits, cudaStream_t stream)
 {
+  std::cout << "Getting compressed data ..." << std::endl;
   uint_t srcstart = src << chunkBits;
   uint_t deststart = dest * (m_doubles+1)/2*17;
   uint_t offstart = src * BLOCKS * WARPS_BLOCK;
@@ -1136,6 +1137,7 @@ template <typename data_t>
 int QubitVectorChunkContainer<data_t>::Get(const QubitVectorChunkContainer& chunks,uint_t src,uint_t bufDest,
                                            int chunkBits,int nChunks,cudaStream_t stream)
 {
+  std::cout << "Getting uncompressed data ..." << std::endl;
   uint_t srcPos,destPos,size;
   srcPos = src << chunkBits;
   destPos = m_size + (bufDest << chunkBits);
