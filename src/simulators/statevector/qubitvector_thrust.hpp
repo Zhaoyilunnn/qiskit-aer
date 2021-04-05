@@ -1045,7 +1045,7 @@ template <typename data_t>
 int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, uint_t dest,
                                                      int chunkBits, cudaStream_t stream)
 {
-/*  uint_t srcstart = src << chunkBits;
+  /*uint_t srcstart = src << chunkBits;
   uint_t deststart = dest << chunkBits;
   uint_t offstart = src * BLOCKS * WARPS_BLOCK;
   uint_t offsrc, offdest = 0;
@@ -1062,8 +1062,8 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer& 
                       sizeof(char)*offset[i], cudaMemcpyHostToDevice, stream);
     }
 
-  }
-  return 0;*/
+  }*/
+  return 0;
 }
 
 template <typename data_t>
