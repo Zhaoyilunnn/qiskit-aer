@@ -3064,9 +3064,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           nChunksOnGPU = num_exe;
           // number of chunks that are active on GPU
           exe_size = size * (nChunksOnGPU / nChunk);  // chunks within a stream will be executed at the same time
-          std::cout << "Execute size: " << exe_size << std::endl;
+//          std::cout << "Execute size: " << exe_size << std::endl;
 
-          std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
+//          std::cout << "Executing On GPU " << "stream " << iStream << " ..." << std::endl;
           // we have copied a group of chunks to GPU, then execute on GPU and copy back to CPU
           //setting buffers
           localMask = 0;
@@ -3077,6 +3077,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           //execute kernel
           bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
+
+          m_Chunks[iPlace].Decompression(iStream*nGPUBufferPerStream, chunkBits, 1,
+                                         dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
+                                         cut, m_Streams[iStream]);
+
           if (func.Reduction())
             ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
                                                (iStream*nGPUBufferPerStream)<<chunkBits,
