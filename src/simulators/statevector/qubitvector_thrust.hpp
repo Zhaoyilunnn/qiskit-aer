@@ -3019,6 +3019,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               iCurExeBuf = iGPUBuffer % nGPUBuffer;
 //              std::cout << "Copying from CPU to GPU..." << std::endl;
               if (!m_Chunks[iPlaceCPU].GetCompressionFlag(m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits))) {
+                std::cout << "Has not been compressed" << std::endl;
                 m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU],
                                      m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                      iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place
