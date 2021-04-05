@@ -743,6 +743,9 @@ public:
   int AllocateParameters(int bits);
 
   // Compression and decompression
+  ull numDoubles() {
+    return m_doubles;
+  }
   ull Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, ull* outsize,cudaStream_t stream);
   void Decompression(uint_t bufSrc, int chunkBits, int nChunks, ull* fbuf, int* cut, cudaStream_t stream);
   int GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, uint_t dest, int chunkBits, cudaStream_t stream);
@@ -859,7 +862,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 //      m_pCutD = new QubitVectorDeviceBuffer<int>(BLOCKS*WARPS_BLOCK);
 //      m_pDbufD = new QubitVectorDeviceBuffer<char>((m_doubles+1)/2*17);
 
-      m_pDbuf = new QubitVectorDeviceBuffer<uchar>(AER_HALF_GPU_BUFFERS*(m_doubles+1)/2*17);
+      m_pDbuf = new QubitVectorDeviceBuffer<uchar>(AER_MAX_GPU_BUFFERS*(m_doubles+1)/2*17);
       m_pOff = new QubitVectorDeviceBuffer<int>(AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
 
       // calculate required padding for last chunk
@@ -3042,7 +3045,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               std::cout << "Num Exe: " << num_exe << std::endl;
               //copy back
 
-              m_Chunks[iPlace].Compression(iStream*nGPUBufferPerStream, chunkBits, 1, dbuf, cut, off, &vCsize[0], m_Streams[iStream+2]);
+              m_Chunks[iPlace].Compression(iStream*nGPUBufferPerStream, chunkBits, 1,
+                                           dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
+                                           cut, off, &vCsize[0], m_Streams[iStream+2]);
               m_Chunks[iPlace].PutOffset(m_Chunks[iPlaceCPU], iStream, m_Streams[iStream]);
 //              cudaDeviceSynchronize();
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
