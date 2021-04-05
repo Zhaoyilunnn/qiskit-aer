@@ -1116,6 +1116,9 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
     // set compression flag
     chunks.m_pFlag->Set(dest, true);
     std::cout << "Stage of host chunk: " << dest << " is " << chunks.m_pFlag->Get(dest) << std::endl;
+    for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
+      std::cout << "Off on this chunk: " << i << " is " << chunks.m_pOffs->Get(dest*BLOCKS*WARPS_BLOCK+i) << std::endl;
+    }
 
 //    std::cout << "Copying back done" << std::endl;
   }
