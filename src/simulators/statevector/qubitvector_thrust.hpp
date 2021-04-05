@@ -1124,6 +1124,10 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
       std::cout << "Off on this chunk: " << i << " is " << chunks.m_pOffs->Get(dest*BLOCKS*WARPS_BLOCK+i) << std::endl;
     }
 
+    for (int i = 0; i < AER_HALF_GPU_BUFFERS * BLOCKS * WARPS_BLOCK; i++) {
+      std::cout << chunks.m_pOffs->Get(i) << " ";
+    }
+
 //    std::cout << "Copying back done" << std::endl;
   }
 
