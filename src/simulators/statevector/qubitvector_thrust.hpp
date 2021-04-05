@@ -650,6 +650,7 @@ protected:
   QubitVectorBuffer<int>* m_pOffs;    // for host
   QubitVectorBuffer<uchar>* m_pDbuf;   // for compression
   QubitVectorBuffer<ull>* m_pCsize;  // compressed size for each chunk
+  QubitVectorBuffer<bool>* m_pFlag;   // indicate whether current chunk is stored in compressed format
 
   ull m_doubles;                      // number of doubles for compression
   int m_dimensionality;               // dimension
@@ -677,6 +678,7 @@ public:
     m_pOff = NULL;
     m_pDbuf = NULL;
     m_pCsize = NULL;
+    m_pFlag = NULL;
 
     m_size = 0;
     m_bufferSize = 0;
@@ -739,6 +741,11 @@ public:
   ull GetCsize(int i)
   {
     return m_pCsize->Get(i);
+  }
+
+  bool GetCompressionFlag(int i)
+  {
+    return m_pFlag->Get(i);
   }
 
   void CopyCsizeOut(ull* pdest, uint_t src, uint_t size) {
@@ -822,6 +829,9 @@ QubitVectorChunkContainer<data_t>::~QubitVectorChunkContainer(void)
   }
   if (m_pOffs) {
     delete m_pOffs;
+  }
+  if (m_pFlag) {
+    delete m_pFlag;
   }
 }
 
@@ -927,6 +937,10 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
       std::cout << "Allocating buffers on CPU for compression ..." << std::endl;
       m_pOff = new QubitVectorHostBuffer<int>(AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
       m_pOffs = new QubitVectorHostBuffer<int>((size >> chunkBits)*BLOCKS*WARPS_BLOCK);
+      m_pFlag = new QubitVectorHostBuffer<bool>(size >> chunkBits);
+      for (uint_t i = 0; i < (size >> chunkBits); i++) {
+        m_pFlag->Set(i, false);
+      }
     }
   }
 
@@ -1093,6 +1107,9 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
                       offadress[i] * sizeof(uchar),
                       cudaMemcpyDeviceToHost, stream);
     }
+
+    // set compression flag
+    chunks.m_pFlag->Set(dest, true);
 
 //    std::cout << "Copying back done" << std::endl;
   }
@@ -3001,11 +3018,15 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             for (i = 0; i < nChunk; i++) {
               iCurExeBuf = iGPUBuffer % nGPUBuffer;
 //              std::cout << "Copying from CPU to GPU..." << std::endl;
-              /*m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
-                                   iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place*/
-              m_Chunks[iPlace].GetCompressed(m_Chunks[iPlaceCPU],
-                                             m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
-                                             iCurExeBuf, chunkBits, m_Streams[iStream]);
+              if (!m_Chunks[iPlaceCPU].GetCompressionFlag(m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf])) {
+                m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU],
+                                     m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
+                                     iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place
+              } else {
+                m_Chunks[iPlace].GetCompressed(m_Chunks[iPlaceCPU],
+                                               m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
+                                               iCurExeBuf, chunkBits, m_Streams[iStream]);
+              }
               chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
               ++iGPUBuffer;
 //              std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
