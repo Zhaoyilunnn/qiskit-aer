@@ -3092,7 +3092,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           //copy back
 
-          m_Chunks[iPlace].Compression(iStream*nGPUBufferPerStream, chunkBits, 1, dbuf, cut, off, &vCsize[0], m_Streams[iStream+2]);
+          m_Chunks[iPlace].Compression(iStream*nGPUBufferPerStream, chunkBits, 1,
+                                       dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
+                                       cut, off, &vCsize[0], m_Streams[iStream+2]);
           m_Chunks[iPlace].PutOffset(m_Chunks[iPlaceCPU], iStream, m_Streams[iStream]);
 //          cudaDeviceSynchronize();
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
