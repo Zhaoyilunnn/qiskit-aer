@@ -3033,6 +3033,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                 m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU],
                                      m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                      iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place
+                m_Chunks[iPlace].SetCompressionFlag(iCurExeBuf, false);
               } else {
                 m_Chunks[iPlace].GetCompressed(m_Chunks[iPlaceCPU],
                                                m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
