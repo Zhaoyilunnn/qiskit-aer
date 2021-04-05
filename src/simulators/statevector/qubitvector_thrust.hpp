@@ -1093,10 +1093,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
     memcpy(chunks.m_pOffs->BufferPtr()+dest*BLOCKS*WARPS_BLOCK,
            chunks.m_pOff->BufferPtr()+offstart,
            BLOCKS*WARPS_BLOCK * sizeof(int));
-    for (int i = 0; i < BLOCKS * WARPS_BLOCK; i++) {
-      std::cout << chunks.m_pOffs->Get(dest*BLOCKS*WARPS_BLOCK + i) << " ";
-    }
-    std::cout << std::endl;
+
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
 //      std::cout << "Copying compressed back Off: " << offadress[i] << std::endl;
       /*cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
@@ -1125,7 +1122,6 @@ int QubitVectorChunkContainer<data_t>::PutOffset(QubitVectorChunkContainer &chun
                   AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK * sizeof(int),
                   cudaMemcpyDeviceToHost, stream);*/
 
-  std::cout << std::endl;
   cudaMemcpy(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(),
              AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK * sizeof(int),
              cudaMemcpyDeviceToHost);
