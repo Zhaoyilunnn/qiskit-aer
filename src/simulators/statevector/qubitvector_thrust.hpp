@@ -1031,7 +1031,8 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
   srcPos = m_size + (bufSrc << chunkBits);
 
 //  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf);
-  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(dbuf, cut, reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos));
+  DecompressionKernel<<<AER_HALF_GPU_BUFFERS*BLOCKS, WARPS_BLOCK*BLOCKS>>>(dbuf, cut,
+                                                                           reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos));
 
 }
 
@@ -3023,7 +3024,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             if (num_exe > 0) { // In this case, some chunks on GPU are not updated
               //execute kernel
               bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
-              //TODO: Decompression is not first copy (a for loop)
+              //TODO: Decompression is not first copy (not a for loop)
+              m_Chunks[iPlace].Decompression(iStream*nGPUBufferPerStream, chunkBits, 1,
+                                             dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
+                                             cut, m_Streams[iStream]);
               if (func.Reduction())
                 ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
                                                    (iStream * nGPUBufferPerStream) << chunkBits,
