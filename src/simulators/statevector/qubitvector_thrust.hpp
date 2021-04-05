@@ -1065,8 +1065,8 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer& 
                       sizeof(char)*offset[i], cudaMemcpyHostToDevice, stream);
     }
 
-  }*/
-  return 0;
+  }
+  return 0;*/
 }
 
 template <typename data_t>
@@ -1076,7 +1076,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
   uint_t deststart, srcstart;
   deststart = dest << chunkBits;
 //  srcstart = bufsrc << chunkBits;
-  bufsrc &= (AER_HALF_GPU_BUFFERS-1);
+//  bufsrc &= (AER_HALF_GPU_BUFFERS-1);
   srcstart = bufsrc * (m_doubles+1)/2*17;
 
   uint_t offstart = bufsrc & (AER_HALF_GPU_BUFFERS-1) * BLOCKS * WARPS_BLOCK;
