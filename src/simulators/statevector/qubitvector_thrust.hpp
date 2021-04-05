@@ -1072,7 +1072,9 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 {
   uint_t deststart, srcstart;
   deststart = dest << chunkBits;
-  srcstart = bufsrc << chunkBits;
+//  srcstart = bufsrc << chunkBits;
+  bufsrc &= (AER_HALF_GPU_BUFFERS-1);
+  srcstart = bufsrc * (m_doubles+1)/2*17;
 
   uint_t offstart = bufsrc & (AER_HALF_GPU_BUFFERS-1) * BLOCKS * WARPS_BLOCK;
 
@@ -1084,8 +1086,12 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
 //      std::cout << "Bound: " << i << std::endl;
 //      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
-      cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
+      /*cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
                       reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcstart+(i-offstart)*PER_CUT/2),
+                      offadress[i] * sizeof(uchar),
+                      cudaMemcpyDeviceToHost, stream);*/
+      cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
+                      m_pDbuf->BufferPtr()+srcstart+((i-offstart)*PER_CUT+1)/2*17,
                       offadress[i] * sizeof(uchar),
                       cudaMemcpyDeviceToHost, stream);
     }
