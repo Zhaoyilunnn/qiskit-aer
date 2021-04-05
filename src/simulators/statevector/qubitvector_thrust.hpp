@@ -1054,31 +1054,16 @@ template <typename data_t>
 int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, uint_t dest,
                                                      int chunkBits, cudaStream_t stream)
 {
-  std::cout << "Getting compressed data ..." << src << std::endl;
-  std::cout << "Stage of host chunk: " << src << " is " << chunks.m_pFlag->Get(src) << std::endl;
   uint_t srcstart = src << chunkBits;
   uint_t deststart = dest * (m_doubles+1)/2*17;
   uint_t offstart = src * BLOCKS * WARPS_BLOCK;
   int* offset = chunks.m_pOffs->BufferPtr()+offstart;
 
-  for (int i = 0; i < AER_HALF_GPU_BUFFERS * BLOCKS * WARPS_BLOCK; i++) {
-    std::cout << chunks.m_pOffs->Get(i) << " ";
-  }
-  std::cout << std::endl;
-  for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
-    std::cout << offset[i] << " ";
-  }
-  std::cout << std::endl;
-  for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
-    std::cout << chunks.m_pOffs->Get(i) << " ";
-  }
-  std::cout << std::endl;
-
   // currently we only support copying to device
   if (m_iDevice >= 0 && chunks.DeviceID() < 0) {
 
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
-      std::cout << "Getting compressed Off: " << offset[i-offstart] << std::endl;
+//      std::cout << "Getting compressed Off: " << offset[i-offstart] << std::endl;
       cudaMemcpyAsync(m_pDbuf->BufferPtr()+deststart+((i-offstart)*PER_CUT+1)/2*17,
                       reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+srcstart+(i-offstart)*PER_CUT/2),
                       offset[i-offstart] * sizeof(uchar),
@@ -1113,9 +1098,7 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
     }
     std::cout << std::endl;
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
-      std::cout << "Copying compressed back Off: " << offadress[i] << std::endl;
-//      std::cout << "Bound: " << i << std::endl;
-//      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
+//      std::cout << "Copying compressed back Off: " << offadress[i] << std::endl;
       /*cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
                       reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcstart+(i-offstart)*PER_CUT/2),
                       offadress[i] * sizeof(uchar),
@@ -1128,14 +1111,6 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
 
     // set compression flag
     chunks.m_pFlag->Set(dest, true);
-    std::cout << "Stage of host chunk: " << dest << " is " << chunks.m_pFlag->Get(dest) << std::endl;
-    for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
-      std::cout << "Off on this chunk: " << i << " is " << chunks.m_pOffs->Get(dest*BLOCKS*WARPS_BLOCK+i) << std::endl;
-    }
-
-    for (int i = 0; i < AER_HALF_GPU_BUFFERS * BLOCKS * WARPS_BLOCK; i++) {
-      std::cout << chunks.m_pOffs->Get(i) << " ";
-    }
 
 //    std::cout << "Copying back done" << std::endl;
   }
@@ -1150,10 +1125,6 @@ int QubitVectorChunkContainer<data_t>::PutOffset(QubitVectorChunkContainer &chun
                   AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK * sizeof(int),
                   cudaMemcpyDeviceToHost, stream);*/
 
-  std::cout << "Putting offset..." << std::endl;
-  for (int i = 0; i < AER_HALF_GPU_BUFFERS * BLOCKS * WARPS_BLOCK; i++) {
-    std::cout << m_pOff->Get(i) << " ";
-  }
   std::cout << std::endl;
   cudaMemcpy(chunks.m_pOff->BufferPtr(), m_pOff->BufferPtr(),
              AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK * sizeof(int),
