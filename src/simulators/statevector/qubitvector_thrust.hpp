@@ -1047,7 +1047,7 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer& 
       cudaMemcpyAsync(m_pDbuf->BufferPtr()+deststart+((i-offstart)*PER_CUT+1)/2*17,
                       reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+srcstart+(i-offstart)*PER_CUT/2),
                       offset[i] * sizeof(uchar),
-                      cudaMemcpyAsync, stream);
+                      cudaMemcpyHostToDevice, stream);
     }
 
   }
