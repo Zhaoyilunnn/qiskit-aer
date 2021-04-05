@@ -249,21 +249,25 @@ __global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
   iindex += WARPSIZE / 2;
   lastidx = (threadIdx.x / WARPSIZE + 1) * (3 * WARPSIZE / 2) - 1;
   // warp id
-  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
+//  warp = (threadIdx.x + blockIdx.x * blockDim.x) / WARPSIZE;
+  warp = ((threadIdx.x + blockIdx.x * blockDim.x) & (BLOCKS*WARPS_BLOCK*WARPSIZE-1)) / WARPSIZE;
+  chunk = (threadIdx.x + blockIdx.x * blockDim.x) / (BLOCKS*WARPS_BLOCK*WARPSIZE);
   // prediction index within previous subchunk
   offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
 
   // determine start and end of chunk to decompress
   start = 0;
-  if (warp > 0) start = cutd[warp-1];
-  term = cutd[warp];
+//  if (warp > 0) start = cutd[warp + chunk*BLOCKS*WARPS_BLOCK-1];
+  if (warp > 0) start = warp*PER_CUT;
+//  term = cutd[warp + chunk*BLOCKS*WARPS_BLOCK];
+  term = (warp+1)*PER_CUT;
   off = ((start+1)/2*17);
 
   prev = 0;
   for (int i = start + lane; i < term; i += WARPSIZE) {
     // read in half-bytes of size and leading-zero count information
     if ((lane & 1) == 0) {
-      code = dbufd[off + (lane >> 1)];
+      code = dbufd[off + (lane >> 1) + chunk*(2*(1ull<<AER_CHUNK_BITS)+1)/2*17];
       ibufs[iindex] = code;
       ibufs[iindex + 1] = code >> 4;
     }
@@ -289,7 +293,7 @@ __global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
     __threadfence_block();
 
     // read in compressed data (the non-zero bytes)
-    beg = off + ibufs[iindex-1];
+    beg = off + ibufs[iindex-1] + chunk*(2*(1ull<<AER_CHUNK_BITS)+1)/2*17;
     off += ibufs[lastidx];
     end = beg + bcount - 1;
     diff = 0;
@@ -304,11 +308,11 @@ __global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
     }
 
     // write out the uncompressed word
-    fbufd[i] = prev + diff;
+    fbufd[i + 2*chunk*(1ull<<AER_CHUNK_BITS)] = prev + diff;
     __threadfence_block();
 
     // save prediction for next subchunk
-    prev = fbufd[i + offset];
+    prev = fbufd[i + offset + 2*chunk*(1ull<<AER_CHUNK_BITS)];
   }
 }
 
