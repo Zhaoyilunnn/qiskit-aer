@@ -1046,7 +1046,7 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
 
 //  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf);
   DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(dbuf, cut,
-                                                                           reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos));
+                                                      reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos));
 
 }
 
