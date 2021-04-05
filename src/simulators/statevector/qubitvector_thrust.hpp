@@ -238,7 +238,7 @@ The decompressed data in fbufd
 __global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
 {
   int offset, code, bcount, off, beg, end, lane, warp, iindex, lastidx, start, term;
-  ull diff, prev;
+  ull diff, prev, chunk;
   __shared__ int ibufs[32 * (3 * WARPSIZE / 2)];
 
   // index within this warp
