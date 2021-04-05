@@ -1049,6 +1049,7 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer& 
   if (m_iDevice >= 0 && chunks.DeviceID() < 0) {
 
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
+      std::cout << "Off: " << offset[i] << std::endl;
       cudaMemcpyAsync(m_pDbuf->BufferPtr()+deststart+((i-offstart)*PER_CUT+1)/2*17,
                       reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+srcstart+(i-offstart)*PER_CUT/2),
                       offset[i] * sizeof(uchar),
@@ -1079,6 +1080,8 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
            chunks.m_pOff->BufferPtr()+offstart,
            BLOCKS*WARPS_BLOCK * sizeof(int));
     for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
+
+      std::cout << "Off: " << offadress[i] << std::endl;
 //      std::cout << "Bound: " << i << std::endl;
 //      std::cout << "Offset: " << chunks.m_pOff->Get(i) << std::endl;
       /*cudaMemcpyAsync(reinterpret_cast<uchar*>(chunks.m_pChunks->BufferPtr()+deststart+(i-offstart)*PER_CUT/2),
