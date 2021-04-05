@@ -1064,6 +1064,15 @@ int QubitVectorChunkContainer<data_t>::GetCompressed(QubitVectorChunkContainer& 
   for (int i = 0; i < AER_HALF_GPU_BUFFERS * BLOCKS * WARPS_BLOCK; i++) {
     std::cout << chunks.m_pOffs->Get(i) << " ";
   }
+  std::cout << std::endl;
+  for (int i = 0; i < BLOCKS*WARPS_BLOCK; i++) {
+    std::cout << offset[i] << " ";
+  }
+  std::cout << std::endl;
+  for (int i = offstart; i < offstart + BLOCKS*WARPS_BLOCK; i++) {
+    std::cout << chunks.m_pOffs->Get(i) << " ";
+  }
+  std::cout << std::endl;
 
   // currently we only support copying to device
   if (m_iDevice >= 0 && chunks.DeviceID() < 0) {
