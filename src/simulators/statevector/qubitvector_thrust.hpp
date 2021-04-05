@@ -753,7 +753,7 @@ public:
     return m_doubles;
   }
   ull Compression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, int* off, ull* outsize,cudaStream_t stream);
-  void Decompression(uint_t bufSrc, int chunkBits, int nChunks, ull* fbuf, int* cut, cudaStream_t stream);
+  void Decompression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, cudaStream_t stream);
   int GetCompressed(QubitVectorChunkContainer& chunks, uint_t src, uint_t dest, int chunkBits, cudaStream_t stream);
   int PutCompressed(QubitVectorChunkContainer &chunks, uint_t dest, uint_t bufsrc, int chunkBits, uint_t size,cudaStream_t stream);
   int PutOffset(QubitVectorChunkContainer &chunks, uint_t dest,cudaStream_t stream);
@@ -1025,13 +1025,13 @@ ull QubitVectorChunkContainer<data_t>::Compression(uint_t bufSrc, int chunkBits,
 }
 
 template <typename data_t>
-void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, int nChunks, ull* fbuf, int* cut, cudaStream_t stream)
+void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBits, int nChunks, uchar* dbuf, int* cut, cudaStream_t stream)
 {
   uint_t srcPos;
   srcPos = m_size + (bufSrc << chunkBits);
 
 //  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf);
-  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf);
+  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(dbuf, cut, reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos));
 
 }
 
