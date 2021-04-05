@@ -235,7 +235,7 @@ Output
 The decompressed data in fbufd
 */
 
-__global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
+__global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd, bool* flagd)
 {
   int offset, code, bcount, off, beg, end, lane, warp, iindex, lastidx, start, term;
   ull diff, prev, chunk;
@@ -254,65 +254,66 @@ __global__ void DecompressionKernel(uchar* dbufd, int* cutd, ull* fbufd)
   chunk = (threadIdx.x + blockIdx.x * blockDim.x) / (BLOCKS*WARPS_BLOCK*WARPSIZE);
   // prediction index within previous subchunk
   offset = WARPSIZE - (dimensionalityd - lane % dimensionalityd) - lane;
-
-  // determine start and end of chunk to decompress
-  start = 0;
+  if (flagd[chunk]) {
+    // determine start and end of chunk to decompress
+    start = 0;
 //  if (warp > 0) start = cutd[warp + chunk*BLOCKS*WARPS_BLOCK-1];
-  if (warp > 0) start = warp*PER_CUT;
+    if (warp > 0) start = warp * PER_CUT;
 //  term = cutd[warp + chunk*BLOCKS*WARPS_BLOCK];
-  term = (warp+1)*PER_CUT;
-  off = ((start+1)/2*17);
+    term = (warp + 1) * PER_CUT;
+    off = ((start + 1) / 2 * 17);
 
-  prev = 0;
-  for (int i = start + lane; i < term; i += WARPSIZE) {
-    // read in half-bytes of size and leading-zero count information
-    if ((lane & 1) == 0) {
-      code = dbufd[off + (lane >> 1) + chunk*(2*(1ull<<AER_CHUNK_BITS)+1)/2*17];
-      ibufs[iindex] = code;
-      ibufs[iindex + 1] = code >> 4;
+    prev = 0;
+    for (int i = start + lane; i < term; i += WARPSIZE) {
+      // read in half-bytes of size and leading-zero count information
+      if ((lane & 1) == 0) {
+        code = dbufd[off + (lane >> 1) + chunk * (2 * (1ull << AER_CHUNK_BITS) + 1) / 2 * 17];
+        ibufs[iindex] = code;
+        ibufs[iindex + 1] = code >> 4;
+      }
+      off += (WARPSIZE / 2);
+      __threadfence_block();
+      code = ibufs[iindex];
+
+      bcount = code & 7;
+      if (bcount >= 2) bcount++;
+
+      // calculate start positions of compressed data
+      ibufs[iindex] = bcount;
+      __threadfence_block();
+      ibufs[iindex] += ibufs[iindex - 1];
+      __threadfence_block();
+      ibufs[iindex] += ibufs[iindex - 2];
+      __threadfence_block();
+      ibufs[iindex] += ibufs[iindex - 4];
+      __threadfence_block();
+      ibufs[iindex] += ibufs[iindex - 8];
+      __threadfence_block();
+      ibufs[iindex] += ibufs[iindex - 16];
+      __threadfence_block();
+
+      // read in compressed data (the non-zero bytes)
+      beg = off + ibufs[iindex - 1] + chunk * (2 * (1ull << AER_CHUNK_BITS) + 1) / 2 * 17;
+      off += ibufs[lastidx];
+      end = beg + bcount - 1;
+      diff = 0;
+      for (; beg <= end; end--) {
+        diff <<= 8;
+        diff |= dbufd[end];
+      }
+
+      // negate delta if sign bit indicates it was negated during compression
+      if ((code & 8) != 0) {
+        diff = -diff;
+      }
+
+      // write out the uncompressed word
+      fbufd[i + 2 * chunk * (1ull << AER_CHUNK_BITS)] = prev + diff;
+      __threadfence_block();
+
+      // save prediction for next subchunk
+      prev = fbufd[i + offset + 2 * chunk * (1ull << AER_CHUNK_BITS)];
     }
-    off += (WARPSIZE/2);
-    __threadfence_block();
-    code = ibufs[iindex];
-
-    bcount = code & 7;
-    if (bcount >= 2) bcount++;
-
-    // calculate start positions of compressed data
-    ibufs[iindex] = bcount;
-    __threadfence_block();
-    ibufs[iindex] += ibufs[iindex-1];
-    __threadfence_block();
-    ibufs[iindex] += ibufs[iindex-2];
-    __threadfence_block();
-    ibufs[iindex] += ibufs[iindex-4];
-    __threadfence_block();
-    ibufs[iindex] += ibufs[iindex-8];
-    __threadfence_block();
-    ibufs[iindex] += ibufs[iindex-16];
-    __threadfence_block();
-
-    // read in compressed data (the non-zero bytes)
-    beg = off + ibufs[iindex-1] + chunk*(2*(1ull<<AER_CHUNK_BITS)+1)/2*17;
-    off += ibufs[lastidx];
-    end = beg + bcount - 1;
-    diff = 0;
-    for (; beg <= end; end--) {
-      diff <<= 8;
-      diff |= dbufd[end];
-    }
-
-    // negate delta if sign bit indicates it was negated during compression
-    if ((code & 8) != 0) {
-      diff = -diff;
-    }
-
-    // write out the uncompressed word
-    fbufd[i + 2*chunk*(1ull<<AER_CHUNK_BITS)] = prev + diff;
-    __threadfence_block();
-
-    // save prediction for next subchunk
-    prev = fbufd[i + offset + 2*chunk*(1ull<<AER_CHUNK_BITS)];
   }
 }
 
@@ -748,6 +749,11 @@ public:
     return m_pFlag->Get(i);
   }
 
+  void SetCompressionFlag(int i, bool flag)
+  {
+    m_pFlag->Set(i, flag);
+  }
+
   void CopyCsizeOut(ull* pdest, uint_t src, uint_t size) {
     cudaMemcpy(pdest, m_pCsize->BufferPtr()+src, size*sizeof(ull), cudaMemcpyDeviceToHost);
   }
@@ -883,6 +889,10 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
 
       m_pDbuf = new QubitVectorDeviceBuffer<uchar>(AER_MAX_GPU_BUFFERS*(m_doubles+1)/2*17);
       m_pOff = new QubitVectorDeviceBuffer<int>(AER_HALF_GPU_BUFFERS*BLOCKS*WARPS_BLOCK);
+      m_pFlag = new QubitVectorDeviceBuffer<bool>(AER_MAX_GPU_BUFFERS);
+      for (int i = 0; i < AER_MAX_GPU_BUFFERS; i++) {
+        m_pFlag->Set(i, false);
+      }
 
       // calculate required padding for last chunk
       // In our implementation, since chunk size is always times of 32, we won't worry about padding
@@ -1045,8 +1055,9 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
   srcPos = m_size + (bufSrc << chunkBits);
 
 //  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf);
-  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(dbuf, cut,
-                                                      reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos));
+  DecompressionKernel<<<AER_HALF_GPU_BUFFERS*BLOCKS, WARPS_BLOCK*BLOCKS>>>(dbuf, cut,
+                                                                           reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
+                                                                           m_pFlag->BufferPtr()+bufSrc);
 
 }
 
@@ -3026,9 +3037,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                 m_Chunks[iPlace].GetCompressed(m_Chunks[iPlaceCPU],
                                                m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
                                                iCurExeBuf, chunkBits, m_Streams[iStream]);
-                m_Chunks[iPlace].Decompression(iCurExeBuf, chunkBits, 1,
+                m_Chunks[iPlace].SetCompressionFlag(iCurExeBuf, true);
+                /*m_Chunks[iPlace].Decompression(iCurExeBuf, chunkBits, 1,
                                                dbuf+iCurExeBuf*(m_Chunks[iPlace].numDoubles()+1)/2*17,
-                                               cut, m_Streams[iStream+2]);
+                                               cut, m_Streams[iStream+2]);*/
               }
               chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
               ++iGPUBuffer;
@@ -3055,6 +3067,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               //execute kernel
               bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
               //TODO: Decompression is not first copy (not a for loop)
+              m_Chunks[iPlace].Decompression(iStream*nGPUBufferPerStream, chunkBits, 1,
+                                             dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
+                                             cut, m_Streams[iStream]);
 
               if (func.Reduction())
                 ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
@@ -3106,9 +3121,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           //execute kernel
           bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
 
-          /*m_Chunks[iPlace].Decompression(iStream*nGPUBufferPerStream, chunkBits, 1,
+          m_Chunks[iPlace].Decompression(iStream*nGPUBufferPerStream, chunkBits, 1,
                                          dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
-                                         cut, m_Streams[iStream]);*/
+                                         cut, m_Streams[iStream]);
 
           if (func.Reduction())
             ret += m_Chunks[iPlace].ExecuteSum(offsets, func, exe_size,
