@@ -2998,8 +2998,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             for (i = 0; i < nChunk; i++) {
               iCurExeBuf = iGPUBuffer % nGPUBuffer;
 //              std::cout << "Copying from CPU to GPU..." << std::endl;
-              m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
-                                   iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place
+              /*m_Chunks[iPlace].Get(m_Chunks[iPlaceCPU], m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
+                                   iCurExeBuf, chunkBits, 1, m_Streams[iStream]);  //copy chunk from other place*/
+              m_Chunks[iPlace].GetCompressed(m_Chunks[iPlaceCPU],
+                                             m_Chunks[iPlaceCPU].LocalChunkID(chunkIDs[iCurExeBuf], chunkBits),
+                                             iCurExeBuf, chunkBits, m_Streams[iStream]);
               chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
               ++iGPUBuffer;
 //              std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
