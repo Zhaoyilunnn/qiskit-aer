@@ -1155,6 +1155,8 @@ protected:
   cudaStream_t m_Streams[AER_NUM_STREAM];
   mutable int stream_id_;
 
+  mutable bool zero_;
+
   //-----------------------------------------------------------------------
   // Protected data members
   //-----------------------------------------------------------------------
@@ -2065,7 +2067,8 @@ void QubitVectorThrust<data_t>::initialize()
   t = 1.0;
 
   if(m_globalIndex == 0){
-    m_Chunks[0].SetState(0,0,t,m_maxChunkBits);
+    m_Chunks[1].SetState(0,0,t,m_maxChunkBits);
+    zero_ = true;
   }
 }
 
@@ -2080,6 +2083,8 @@ void QubitVectorThrust<data_t>::initialize_from_vector(const cvector_t<double> &
 #ifdef AER_DEBUG
   DebugMsg("calling initialize_from_vector");
 #endif
+
+  zero_ = false;
 
   int iPlace;
   uint_t i,ic,nc;
@@ -2114,6 +2119,8 @@ void QubitVectorThrust<data_t>::initialize_from_data(const std::complex<data_t>*
                         std::to_string(data_size_) + "!=" + std::to_string(num_states) + ")";
     throw std::runtime_error(error);
   }
+
+  zero_ = false;
 
 #ifdef AER_DEBUG
   DebugMsg("calling initialize_from_data");
@@ -2405,7 +2412,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           baseChunk = GetBaseChunkID(m_Chunks[iPlaceCPU].ChunkID(iChunk, chunkBits), large_qubits, chunkBits);
 
-          if (baseChunk > entangled) { // rest chunks will be zero, stop here
+          if (baseChunk > entangled && zero_) { // rest chunks will be zero, stop here
             break;
           }
 
@@ -2437,6 +2444,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
 
           iGPUBuffer -= nChunk;
+
+          if (!zero_) {
+            is_copy = true;
+          }
+
           if (is_copy) {
             for (i = 0; i < nChunk; i++) {
               iCurExeBuf = iGPUBuffer % nGPUBuffer;
