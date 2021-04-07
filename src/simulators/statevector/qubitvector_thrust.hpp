@@ -1752,6 +1752,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   num_qubits_ = num_qubits;
   data_size_ = 1ull << num_qubits;
   entangled_flag_ = 0;
+  zero_ = true;
   char* str;
   int i;
 
