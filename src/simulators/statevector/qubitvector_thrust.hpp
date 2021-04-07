@@ -4421,26 +4421,29 @@ reg_t QubitVectorThrust<data_t>::sample_measure(const std::vector<double> &rnds)
     int iDev;
 
     iPlace = omp_get_thread_num();
-    iDev = m_Chunks[iPlace].DeviceID();
+    if (iPlace == m_nPlaces - 1) {
+      iDev = m_Chunks[iPlace].DeviceID();
 #ifdef AER_THRUST_CUDA
-    if(iDev >= 0){
-      cudaSetDevice(iDev);
-    }
+      if(iDev >= 0){
+        cudaSetDevice(iDev);
+      }
 #endif
 
-    pVec = (data_t*)m_Chunks[iPlace].ChunkPtr(0,m_maxChunkBits);
-    size = m_Chunks[iPlace].Size() * 2;
+      pVec = (data_t *) m_Chunks[iPlace].ChunkPtr(0, m_maxChunkBits);
+      size = m_Chunks[iPlace].Size() * 2;
 
-    if(iPlace < m_nDevParallel){
-      thrust::transform_inclusive_scan(thrust::device,pVec,pVec+size,pVec,thrust::square<double>(),thrust::plus<double>());
+      if (iPlace < m_nDevParallel) {
+        thrust::transform_inclusive_scan(thrust::device, pVec, pVec + size, pVec, thrust::square<double>(),
+                                         thrust::plus<double>());
+      } else {
+        auto policy = (num_qubits_ > omp_threshold_ && omp_threads_ > 1)
+                      ? thrust::omp::par
+                      : thrust::seq;
+        thrust::transform_inclusive_scan(policy, pVec, pVec + size, pVec, thrust::square<double>(),
+                                         thrust::plus<double>());
+      }
+      placeSum[iPlace] = m_Chunks[iPlace].GetState(m_Chunks[iPlace].Size() - 1).imag();
     }
-    else{
-      auto policy = (num_qubits_ > omp_threshold_ && omp_threads_ > 1)
-          ? thrust::omp::par
-          : thrust::seq;
-      thrust::transform_inclusive_scan(policy,pVec,pVec+size,pVec,thrust::square<double>(),thrust::plus<double>());
-    }
-    placeSum[iPlace] = m_Chunks[iPlace].GetState(m_Chunks[iPlace].Size()-1).imag();
   }
 
   localSum = 0.0;
@@ -4480,47 +4483,49 @@ reg_t QubitVectorThrust<data_t>::sample_measure(const std::vector<double> &rnds)
     int iDev;
 
     iPlace = omp_get_thread_num();
-    iDev = m_Chunks[iPlace].DeviceID();
+    if (iPlace == m_nPlaces - 1) {
+      iDev = m_Chunks[iPlace].DeviceID();
 #ifdef AER_THRUST_CUDA
-    if(iDev >= 0){
-      cudaSetDevice(iDev);
-    }
+      if(iDev >= 0){
+        cudaSetDevice(iDev);
+      }
 #endif
 
-    pVec = (data_t*)m_Chunks[iPlace].ChunkPtr(0,m_maxChunkBits);
-    size = m_Chunks[iPlace].Size() * 2;
+      pVec = (data_t *) m_Chunks[iPlace].ChunkPtr(0, m_maxChunkBits);
+      size = m_Chunks[iPlace].Size() * 2;
 
-    nIn = 0;
-    for(i=0;i<SHOTS;i++){
-      if(rnds[i] >= globalSum + placeSum[iPlace] && rnds[i] < globalSum + placeSum[iPlace+1]){
-        vRnd[nIn] = rnds[i] - (globalSum + placeSum[iPlace]);
-        vIdx[nIn] = i;
-        nIn++;
+      nIn = 0;
+      for (i = 0; i < SHOTS; i++) {
+        if (rnds[i] >= globalSum + placeSum[iPlace] && rnds[i] < globalSum + placeSum[iPlace + 1]) {
+          vRnd[nIn] = rnds[i] - (globalSum + placeSum[iPlace]);
+          vIdx[nIn] = i;
+          nIn++;
+        }
       }
-    }
 
-    if(nIn > 0){
+      if (nIn > 0) {
 #ifdef AER_THRUST_CUDA
-      if(iPlace < m_nDevParallel){
-        thrust::device_vector<double> vRnd_dev(SHOTS);
-        thrust::device_vector<uint_t> vSmp_dev(SHOTS);
+        if(iPlace < m_nDevParallel){
+          thrust::device_vector<double> vRnd_dev(SHOTS);
+          thrust::device_vector<uint_t> vSmp_dev(SHOTS);
 
-        vRnd_dev = vRnd;
-        thrust::lower_bound(thrust::device, pVec, pVec + size, vRnd_dev.begin(), vRnd_dev.begin() + nIn, vSmp_dev.begin());
-        vSmp = vSmp_dev;
-      }
-      else{
+          vRnd_dev = vRnd;
+          thrust::lower_bound(thrust::device, pVec, pVec + size, vRnd_dev.begin(), vRnd_dev.begin() + nIn, vSmp_dev.begin());
+          vSmp = vSmp_dev;
+        }
+        else{
 #endif
         auto policy = (num_qubits_ > omp_threshold_ && omp_threads_ > 1)
-          ? thrust::omp::par
-          : thrust::seq;
+                      ? thrust::omp::par
+                      : thrust::seq;
         thrust::lower_bound(policy, pVec, pVec + size, vRnd.begin(), vRnd.begin() + nIn, vSmp.begin());
 #ifdef AER_THRUST_CUDA
-      }
+        }
 #endif
 
-      for(i=0;i<nIn;i++){
-        localSamples[vIdx[i]] = m_Chunks[iPlace].GlobalIndex() + vSmp[i]/2;
+        for (i = 0; i < nIn; i++) {
+          localSamples[vIdx[i]] = m_Chunks[iPlace].GlobalIndex() + vSmp[i] / 2;
+        }
       }
     }
   }
