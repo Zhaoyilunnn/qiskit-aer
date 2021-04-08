@@ -244,7 +244,7 @@ public:
     ;
   }
 
-  thrust::host_vector<data_t>& Buffer(void)
+  thrust::host_vector<data_t, thrust::cuda::experimental::pinned_allocator<data_t> >& Buffer(void)
   {
     return m_Buffer;
   }
