@@ -474,6 +474,8 @@ void State<statevec_t>::apply_ops(const std::vector<Operations::Op> &ops,
                                   bool final_ops) {
 
   std::cout << "Start applying operations ..." << std::endl;
+  size_t op_size = ops.size();
+  BaseState::qreg_.get_op_num(op_size);
   // Simple loop over vector of input operations
   for (size_t i = 0; i < ops.size(); ++i) {
     const auto& op = ops[i];

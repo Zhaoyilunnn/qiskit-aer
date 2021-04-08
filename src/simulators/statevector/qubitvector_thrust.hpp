@@ -1477,6 +1477,9 @@ public:
   // Returns the number of qubits for the current vector
   virtual uint_t num_qubits() const {return num_qubits_;}
 
+  // Set the number of operations
+  void get_op_num(size_t op_size) {op_size_ = op_size};
+
   // Return the size of streams
   uint_t streams_size() const {return sizeof(m_Streams) / sizeof(m_Streams[0]);}
 
@@ -1728,6 +1731,9 @@ protected:
   mutable int stream_id_;
 
   mutable bool zero_; // indicating whether state vector is initialized to zero
+
+  size_t op_size_;    // number of operations
+  mutable size_t op_exe_;     // number of executed operations
 
   //-----------------------------------------------------------------------
   // Protected data members
