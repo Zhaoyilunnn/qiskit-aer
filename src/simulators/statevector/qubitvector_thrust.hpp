@@ -3194,6 +3194,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   // update executed operations
   op_exe_ += 1;
+  std::cout << "Executed: " << op_exe_ << " of " << op_size_ << std::endl;
 
   std::cout << "apply function done" << std::endl;
 
