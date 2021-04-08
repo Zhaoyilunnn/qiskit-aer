@@ -3164,6 +3164,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           //copy back
           if (op_exe_ < op_size_ - 1) { // for the last operation, do not compress
+            std::cout << "Compression .." << std::endl;
             m_Chunks[iPlace].Compression(iStream * nGPUBufferPerStream, chunkBits, 1,
                                          dbuf +
                                          (iStream * nGPUBufferPerStream) * (m_Chunks[iPlace].numDoubles() + 1) / 2 * 17,
@@ -3174,9 +3175,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
             if (op_exe_ >= op_size_ - 1) { // for the last operation, do not compress
+              std::cout << "Not compression" << std::endl;
               m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
                                    chunkBits, 1, m_Streams[iStream]);
             } else {
+              std::cout << "Compression .." << std::endl;
               m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                              m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
                                              i, chunkBits, 0, m_Streams[iStream]);
