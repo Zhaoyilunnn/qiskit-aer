@@ -27,6 +27,7 @@
 #include <thrust/transform.h>
 #include <thrust/transform_scan.h>
 #include <thrust/binary_search.h>
+#include <thrust/system/cuda/experimental/pinned_allocator.h>
 #include <thrust/execution_policy.h>
 #include <thrust/functional.h>
 #include <thrust/tuple.h>
