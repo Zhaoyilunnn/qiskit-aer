@@ -236,7 +236,8 @@ template <typename data_t>
 class QubitVectorHostBuffer : public QubitVectorBuffer<data_t>
 {
 protected:
-  thrust::host_vector<data_t> m_Buffer;
+//  thrust::host_vector<data_t> m_Buffer;
+  thrust::host_vector<data_t, thrust::cuda::experimental::pinned_allocator<data_t> > m_Buffer;
 public:
   QubitVectorHostBuffer(uint_t size) : m_Buffer(size)
   {
