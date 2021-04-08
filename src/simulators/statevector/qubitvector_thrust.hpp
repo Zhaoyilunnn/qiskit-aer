@@ -1478,7 +1478,10 @@ public:
   virtual uint_t num_qubits() const {return num_qubits_;}
 
   // Set the number of operations
-  void get_op_num(size_t op_size) {op_size_ = op_size;}
+  void get_op_num(size_t op_size) {
+    op_size_ = op_size;
+    op_exe_ = 0;
+  }
 
   // Return the size of streams
   uint_t streams_size() const {return sizeof(m_Streams) / sizeof(m_Streams[0]);}
