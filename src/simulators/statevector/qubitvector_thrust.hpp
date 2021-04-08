@@ -2330,6 +2330,9 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   num_qubits_ = num_qubits;
   data_size_ = 1ull << num_qubits;
   entangled_flag_ = 0;
+  zero_ = true;
+  op_size_ = 0;
+  op_exe_ = 0;
   char* str;
   int i;
 
@@ -3102,18 +3105,25 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               std::cout << "Num Exe: " << num_exe << std::endl;
               //copy back
 
-              m_Chunks[iPlace].Compression(iStream*nGPUBufferPerStream, chunkBits, 1,
-                                           dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
-                                           cut, off, &vCsize[0], m_Streams[iStream+2]);
-              m_Chunks[iPlace].PutOffset(m_Chunks[iPlaceCPU], iStream, m_Streams[iStream]);
+              if (op_exe_ < op_size_ - 1) { // for the last operation, do not compress
+                m_Chunks[iPlace].Compression(iStream * nGPUBufferPerStream, chunkBits, 1,
+                                             dbuf +
+                                             (iStream * nGPUBufferPerStream) * (m_Chunks[iPlace].numDoubles() + 1) / 2 *
+                                             17,
+                                             cut, off, &vCsize[0], m_Streams[iStream + 2]);
+                m_Chunks[iPlace].PutOffset(m_Chunks[iPlaceCPU], iStream, m_Streams[iStream]);
+              }
 //              cudaDeviceSynchronize();
               for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //              std::cout << "Copying back to CPU ..." << std::endl;
-//                m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
-//                                     chunkBits, 1, m_Streams[iStream]);
-                m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
-                                               m_Chunks[places[i]].LocalChunkID(chunkIDs[i],chunkBits),
-                                               i, chunkBits, 0, m_Streams[iStream]);
+                if (op_exe_ >= op_size_ - 1) { // for the last operation, do not compress
+                  m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
+                                       chunkBits, 1, m_Streams[iStream]);
+                } else {
+                  m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
+                                                 m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
+                                                 i, chunkBits, 0, m_Streams[iStream]);
+                }
               }
               // Switch stream
               iStream = (iStream + 1) % AER_NUM_STREAM; // current stream
@@ -3153,22 +3163,24 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                      enable_omp, m_Streams[iStream]);
 
           //copy back
-
-          m_Chunks[iPlace].Compression(iStream*nGPUBufferPerStream, chunkBits, 1,
-                                       dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
-                                       cut, off, &vCsize[0], m_Streams[iStream+2]);
-          m_Chunks[iPlace].PutOffset(m_Chunks[iPlaceCPU], iStream, m_Streams[iStream]);
+          if (op_exe_ < op_size_ - 1) { // for the last operation, do not compress
+            m_Chunks[iPlace].Compression(iStream * nGPUBufferPerStream, chunkBits, 1,
+                                         dbuf +
+                                         (iStream * nGPUBufferPerStream) * (m_Chunks[iPlace].numDoubles() + 1) / 2 * 17,
+                                         cut, off, &vCsize[0], m_Streams[iStream + 2]);
+            m_Chunks[iPlace].PutOffset(m_Chunks[iPlaceCPU], iStream, m_Streams[iStream]);
+          }
 //          cudaDeviceSynchronize();
           for (i = iStream*nGPUBufferPerStream; i < iStream*nGPUBufferPerStream + nChunksOnGPU; i++) {
 //            std::cout << "Copying back to CPU ..." << std::endl;
-            /*std::cout << "Compressed size " << vCsize[i] << std::endl;
-            m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
-                                           m_Chunks[places[i]].LocalChunkID(chunkIDs[i],chunkBits),
-                                           i, chunkBits, vCsize[i], m_Streams[iStream]);*/
-
-            m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
-                                           m_Chunks[places[i]].LocalChunkID(chunkIDs[i],chunkBits),
-                                           i, chunkBits, 0, m_Streams[iStream]);
+            if (op_exe_ >= op_size_ - 1) { // for the last operation, do not compress
+              m_Chunks[iPlace].Put(m_Chunks[places[i]], m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits), i,
+                                   chunkBits, 1, m_Streams[iStream]);
+            } else {
+              m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
+                                             m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
+                                             i, chunkBits, 0, m_Streams[iStream]);
+            }
           }
         }
         // Update stream index
@@ -3179,6 +3191,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   // After execution, update entanglement state
   update_entangled_state(qubits);
+
+  // update executed operations
+  op_exe_ += 1;
 
   std::cout << "apply function done" << std::endl;
 
