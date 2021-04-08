@@ -94,7 +94,7 @@ public:
   void set_num_qubits(size_t num_qubits);
 
   // Set number of operations (TODO)
-  void get_op_size(size_t op_size) {};
+  void get_op_num(size_t op_size) {};
 
   // Returns the number of qubits for the current vector
   virtual uint_t num_qubits() const {return num_qubits_;}
