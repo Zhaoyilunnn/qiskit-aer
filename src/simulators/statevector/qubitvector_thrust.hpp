@@ -523,6 +523,11 @@ public:
     return m_Buffer[i];
   }
 
+  void Fill(const data_t& t)
+  {
+    thrust::fill_n(thrust::host, m_Buffer.begin(), m_Buffer.end(), t);
+  }
+
   void Resize(uint_t size)
   {
     if(QubitVectorBuffer<data_t>::m_size != size){
