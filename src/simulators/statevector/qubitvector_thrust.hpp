@@ -418,6 +418,7 @@ public:
   }
   virtual void Set(uint_t i,const data_t& t) = 0;
   virtual data_t Get(uint_t i) const = 0;
+  virtual void Fill(const data_t& t) = 0;
 
   virtual void Resize(uint_t size) = 0;
 
