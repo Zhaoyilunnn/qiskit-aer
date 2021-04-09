@@ -871,7 +871,7 @@ int QubitVectorChunkContainer<data_t>::Allocate(uint_t size_in,uint_t bufferSize
     else{
 #endif
       m_pChunks = new QubitVectorHostBuffer<thrust::complex<data_t>>(size);
-      std::complex<data_t> a = 0.0;
+      thrust::complex<data_t> a = 0.0;
       m_pChunks->Fill(a);
       std::cout << "Allocated host size: " << size << std::endl;
 #ifdef AER_THRUST_CUDA
