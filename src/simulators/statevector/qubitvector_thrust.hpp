@@ -469,6 +469,11 @@ public:
     return m_Buffer[i];
   }
 
+  void Fill(const data_t& t)
+  {
+    ;
+  }
+
   void Resize(uint_t size)
   {
     if(QubitVectorBuffer<data_t>::m_size != size){
