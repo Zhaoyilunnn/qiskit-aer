@@ -421,7 +421,7 @@ public:
   }
 
   data_t GetValue(int i) const {
-    return m_pChunks->Get(i);
+    return reinterpret_cast<std::complex<data_t>>(m_pChunks->Get(i));
   }
 
   int Allocate(uint_t size,uint_t bufferSize = 0);
