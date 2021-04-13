@@ -420,7 +420,7 @@ public:
     return m_size;
   }
 
-  void GetValue(int i) const {
+  data_t GetValue(int i) const {
     return m_pChunks->Get(i);
   }
 
