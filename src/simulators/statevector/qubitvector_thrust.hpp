@@ -417,6 +417,11 @@ public:
     return m_size;
   }
 
+  data_t GetValue(uint_t i) const
+  {
+    return m_pChunks->Get(i);
+  }
+
   int Allocate(uint_t size,uint_t bufferSize = 0);
   int AllocateParameters(int bits);
 
@@ -1990,8 +1995,13 @@ void QubitVectorThrust<data_t>::initialize()
   t = 1.0;
 
   if(m_globalIndex == 0){
-    m_Chunks[0].SetState(0,0,t,m_maxChunkBits);
+    m_Chunks[1].SetState(0,0,t,m_maxChunkBits);
   }
+
+  for (int i = 0; i < 10; i++) {
+    std::cout << m_Chunks[1].GetValue(i) << std::endl;
+  }
+
 }
 
 template <typename data_t>
