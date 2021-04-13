@@ -2077,7 +2077,7 @@ void QubitVectorThrust<data_t>::initialize()
   }
   // Print state
   for (int i = 0; i < 10; i++) {
-    std::cout << m_Chunks[i].GetValue(i) << std::endl;
+    std::cout << m_Chunks[1].GetValue(i) << std::endl;
   }
 }
 
@@ -2566,7 +2566,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   // check amplitudes
   for (int i = 0; i < 10; i++) {
-    std::cout << m_Chunks[0].GetValue(i) << std::endl;
+    std::cout << m_Chunks[1].GetValue(i) << std::endl;
   }
 
   return ret;
