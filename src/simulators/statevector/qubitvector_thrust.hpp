@@ -769,6 +769,11 @@ public:
     cudaMemcpy(pdest, m_pCsize->BufferPtr()+src, size*sizeof(ull), cudaMemcpyDeviceToHost);
   }
 
+  thrust::complex<data_t> GetValue(uint_t i) const
+  {
+    return m_pChunks->Get(i);
+  }
+
   int Allocate(uint_t size,uint_t bufferSize = 0, int chunkBits=21);
   int AllocateParameters(int bits);
 
@@ -2669,6 +2674,11 @@ void QubitVectorThrust<data_t>::initialize()
     m_Chunks[1].SetState(0,0,t,m_maxChunkBits);
     zero_ = true;
   }
+
+  for (int i = 0; i < 32; i++) {
+    std::cout << m_Chunks[1].GetValue(i) << std::endl;
+  }
+
 }
 
 template <typename data_t>
@@ -3207,6 +3217,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   // After execution, update entanglement state
   update_entangled_state(qubits);
+
+  // check state amplitudes after updating chunks
+  for (int i = 0; i < 32; i++) {
+    std::cout << m_Chunks[1].GetValue(i) << std::endl;
+  }
 
   // update executed operations
   op_exe_ += 1;
