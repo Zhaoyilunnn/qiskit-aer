@@ -420,6 +420,10 @@ public:
     return m_size;
   }
 
+  void GetValue(int i) const {
+    return m_pChunks->Get(i);
+  }
+
   int Allocate(uint_t size,uint_t bufferSize = 0);
   int AllocateParameters(int bits);
 
@@ -2071,6 +2075,10 @@ void QubitVectorThrust<data_t>::initialize()
     m_Chunks[1].SetState(0,0,t,m_maxChunkBits);
     zero_ = true;
   }
+  // Print state
+  for (int i = 0; i < 10; i++) {
+    std::cout << m_Chunks[i].GetValue(i) << std::endl;
+  }
 }
 
 template <typename data_t>
@@ -2383,6 +2391,9 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
       int num_exe = 0;
 
+      // print state vector
+
+
       noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
         for (iGPUBuffer = 0; iGPUBuffer < nTotalChunks; iGPUBuffer += nGPUBuffer) {
@@ -2552,6 +2563,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   else
     DebugDump();
 #endif
+
+  // check amplitudes
+  for (int i = 0; i < 10; i++) {
+    std::cout << m_Chunks[0].GetValue(i) << std::endl;
+  }
 
   return ret;
 }
