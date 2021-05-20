@@ -3094,6 +3094,12 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                                dbuf+iCurExeBuf*(m_Chunks[iPlace].numDoubles()+1)/2*17,
                                                cut, m_Streams[iStream+2]);*/
               }
+
+              // TODO(delete) print states for debug
+              for (int i = 0; i < 32; i++) {
+                std::cout << m_Chunks[1].GetValue(i) << std::endl;
+              }
+
               chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
               ++iGPUBuffer;
 //              std::cout << "GPU Buffer Index: " << iGPUBuffer << std::endl;
@@ -3222,6 +3228,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   // After execution, update entanglement state
   update_entangled_state(qubits);
 
+  //TODO(delete)
   // check state amplitudes after updating chunks
   for (int i = 0; i < 32; i++) {
     std::cout << m_Chunks[1].GetValue(i) << std::endl;
