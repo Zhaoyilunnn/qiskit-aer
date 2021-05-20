@@ -1082,7 +1082,7 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
   for (int i = 0; i < 32; i++) {
     std::cout << GetValue(i) << " ";
   }
-  std::endl;
+  std::cout << std::endl;
 
 }
 
