@@ -1072,6 +1072,14 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
   uint_t srcPos;
   srcPos = m_size + (bufSrc << chunkBits);
 
+  //TODO(delete)
+  // print states for debug
+  std::cout << "amplitudes before decompression: " << " ";
+  for (int i = 0; i < 32; i++) {
+    std::cout << GetValue(i) << " ";
+  }
+  std::cout << std::endl;
+
 //  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf);
   DecompressionKernel<<<AER_HALF_GPU_BUFFERS*BLOCKS, WARPS_BLOCK*BLOCKS>>>(dbuf, cut,
                                                                            reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
