@@ -1072,25 +1072,25 @@ void QubitVectorChunkContainer<data_t>::Decompression(uint_t bufSrc, int chunkBi
   uint_t srcPos;
   srcPos = m_size + (bufSrc << chunkBits);
 
-  //TODO(delete)
+  /*//TODO(delete)
   // print states for debug
   std::cout << "amplitudes before decompression: " << " ";
   for (int i = 0; i < 32; i++) {
     std::cout << GetValue(i) << " ";
   }
-  std::cout << std::endl;
+  std::cout << std::endl;*/
 
 //  DecompressionKernel<<<BLOCKS, WARPS_BLOCK*BLOCKS>>>(reinterpret_cast<uchar*>(m_pChunks->BufferPtr()+srcPos), cut, fbuf);
   DecompressionKernel<<<AER_HALF_GPU_BUFFERS*BLOCKS, WARPS_BLOCK*BLOCKS>>>(dbuf, cut,
                                                                            reinterpret_cast<ull*>(m_pChunks->BufferPtr()+srcPos),
                                                                            m_pFlag->BufferPtr()+bufSrc);
-  //TODO(delete)
+  /*//TODO(delete)
   // print states for debug
   std::cout << "amplitudes after decompression: " << " ";
   for (int i = 0; i < 32; i++) {
     std::cout << GetValue(i) << " ";
   }
-  std::cout << std::endl;
+  std::cout << std::endl;*/
 
 }
 
@@ -3106,12 +3106,12 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                                cut, m_Streams[iStream+2]);*/
               }
 
-              // TODO(delete) print states for debug
+              /*// TODO(delete) print states for debug
               std::cout << "amplitudes on CPU: " << " ";
               for (int i = 0; i < 32; i++) {
                 std::cout << m_Chunks[1].GetValue(i) << " ";
               }
-              std::cout << std::endl;
+              std::cout << std::endl;*/
 
               chunkOffsets[iCurExeBuf] = m_Chunks[iPlace].Size() + (iCurExeBuf << chunkBits);
               ++iGPUBuffer;
@@ -3138,13 +3138,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               //execute kernel
               bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
 
-              //TODO(delete)
+              /*//TODO(delete)
               //debug
               std::cout << "amplitudes on GPU: " << " ";
               for (int i = 0; i < 32; i++) {
                 std::cout << m_Chunks[0].GetValue(i) << " ";
               }
-              std::cout << std::endl;
+              std::cout << std::endl;*/
 
               m_Chunks[iPlace].Decompression(iStream*nGPUBufferPerStream, chunkBits, 1,
                                              dbuf+(iStream*nGPUBufferPerStream)*(m_Chunks[iPlace].numDoubles()+1)/2*17,
@@ -3261,9 +3261,10 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   //TODO(delete)
   // check state amplitudes after updating chunks
-  /*for (int i = 0; i < 32; i++) {
-    std::cout << m_Chunks[1].GetValue(i) << std::endl;
-  }*/
+  for (int i = 0; i < 32; i++) {
+    std::cout << m_Chunks[1].GetValue(i) << " ";
+  }
+  std::cout << std::endl;
 
   // update executed operations
   op_exe_ += 1;
