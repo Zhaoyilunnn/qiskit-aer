@@ -3183,7 +3183,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                   // Only after initialization will we set flag, indicating whether a chunk has been compressed
                   if (op_size_ > 0) {
                     m_Chunks[places[i]].SetCompressionFlag(m_Chunks[places[i]].LocalChunkID((chunkIDs[i], chunkBits)),
-                                                           true)
+                                                           true);
                   }
                 }
               }
@@ -3245,7 +3245,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               // Only after initialization will we set flag, indicating whether a chunk has been compressed
               if (op_size_ > 0) {
                 m_Chunks[places[i]].SetCompressionFlag(m_Chunks[places[i]].LocalChunkID((chunkIDs[i], chunkBits)),
-                                                       true)
+                                                       true);
               }
             }
           }
