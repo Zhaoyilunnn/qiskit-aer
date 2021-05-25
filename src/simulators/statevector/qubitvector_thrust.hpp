@@ -1150,8 +1150,8 @@ int QubitVectorChunkContainer<data_t>::PutCompressed(QubitVectorChunkContainer &
                       cudaMemcpyDeviceToHost, stream);
     }
 
-    // set compression flag
-    chunks.m_pFlag->Set(dest, true);
+    /*// set compression flag
+    chunks.m_pFlag->Set(dest, true);*/
 
 //    std::cout << "Copying back done" << std::endl;
   }
@@ -3180,6 +3180,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                   m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                                  m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
                                                  i, chunkBits, 0, m_Streams[iStream]);
+                  // Only after initialization will we set flag, indicating whether a chunk has been compressed
+                  if (op_size_ > 0) {
+                    m_Chunks[places[i]].SetCompressionFlag(m_Chunks[places[i]].LocalChunkID((chunkIDs[i], chunkBits)),
+                                                           true)
+                  }
                 }
               }
               // Switch stream
@@ -3237,6 +3242,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
               m_Chunks[iPlace].PutCompressed(m_Chunks[places[i]],
                                              m_Chunks[places[i]].LocalChunkID(chunkIDs[i], chunkBits),
                                              i, chunkBits, 0, m_Streams[iStream]);
+              // Only after initialization will we set flag, indicating whether a chunk has been compressed
+              if (op_size_ > 0) {
+                m_Chunks[places[i]].SetCompressionFlag(m_Chunks[places[i]].LocalChunkID((chunkIDs[i], chunkBits)),
+                                                       true)
+              }
             }
           }
         }
