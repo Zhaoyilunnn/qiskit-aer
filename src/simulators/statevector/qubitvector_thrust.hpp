@@ -419,6 +419,10 @@ public:
   {
     return m_size;
   }
+  thrust::complex<data_t> GetValue(uint_t i) const
+  {
+    return m_pChunks->Get(i);
+  }
 
   int Allocate(uint_t size,uint_t bufferSize = 0);
   int AllocateParameters(int bits);
@@ -2545,6 +2549,14 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
   // After execution, update entanglement state
   update_entangled_state(qubits);
+
+  char* pDebug = getenv("QCDEBUG");
+  if (pDebug != NULL) {
+    for (int i = 0; i < 32; i++) {
+      std::cout << m_Chunks[1].GetValue(i) << " ";
+    }
+    std::cout << std::endl;
+  }
 
 #ifdef AER_DEBUG
   if(func.Reduction())
