@@ -417,7 +417,7 @@ public:
     return m_size;
   }
 
-  data_t GetValue(uint_t i) const
+  thrust::complex<data_t> GetValue(uint_t i) const
   {
     return m_pChunks->Get(i);
   }
@@ -2343,6 +2343,14 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
         }
       }
     }
+  }
+
+  char* pDebug = getenv("QCDEBUG");
+  if (pDebug != NULL) {
+    for (int i = 0; i < 32; i++) {
+      std::cout << m_Chunks[1].GetValue(i) << " ";
+    }
+    std::cout << std::endl;
   }
 
 #ifdef AER_DEBUG
