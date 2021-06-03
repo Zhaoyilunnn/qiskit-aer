@@ -2415,6 +2415,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
             localMask |= (1ull << ib); //currently all buffers are local
           }
 
+          char* pDebug = getenv("QCDEBUG");
+          if (pDebug != NULL) {
+            std::cout << "number of chunks to be executed on GPU: " << num_exe << std::endl;
+          }
+
           //execute kernel
           bool enable_omp = (num_qubits_ > omp_threshold_ && omp_threads_ > 1);
           if (func.Reduction())
