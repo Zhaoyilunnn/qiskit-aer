@@ -19,6 +19,7 @@ rhs*_op.pyx
 *.egg*
 build/*
 qiskit/providers/aer/backends/libomp.dylib
+dist/*
 
 # Ignore macOS DS_Store
 .DS_Store
