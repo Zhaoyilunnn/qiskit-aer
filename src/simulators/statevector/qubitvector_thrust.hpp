@@ -3259,12 +3259,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   // After execution, update entanglement state
   update_entangled_state(qubits);
 
-  //TODO(delete)
-  // check state amplitudes after updating chunks
-  for (int i = 0; i < 32; i++) {
-    std::cout << m_Chunks[1].GetValue(i) << " ";
+  char* pDebug = getenv("QCDEBUG");
+  if (pDebug != NULL) {
+    for (int i = 0; i < 32; i++) {
+      std::cout << m_Chunks[1].GetValue(i) << " ";
+    }
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
 
   // update executed operations
   op_exe_ += 1;
