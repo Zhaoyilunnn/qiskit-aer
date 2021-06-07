@@ -724,6 +724,16 @@ template <typename Function>
 int QubitVectorChunkContainer<data_t>::Execute(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
                                                uint_t localMask, bool omp_parallel, cudaStream_t stream)
 {
+  char* pDebug = getenv("QCDEBUG");
+  if (pDebug != NULL) {
+    std::cout << "OFFSETS: ";
+    for (int i = 0; i < offsets.size(); i++) {
+      std::cout << offsets[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "SIZE: " << size << std::endl;
+  }
+
   struct GateParams<data_t> params;
 
   params.buf_ = m_pChunks->BufferPtr();
@@ -767,6 +777,16 @@ template <typename Function>
 double QubitVectorChunkContainer<data_t>::ExecuteSum(std::vector<uint_t>& offsets,Function func,uint_t size,uint_t gid,
                                                      uint_t localMask, bool omp_parallel, cudaStream_t stream)
 {
+  char* pDebug = getenv("QCDEBUG");
+  if (pDebug != NULL) {
+    std::cout << "OFFSETS: ";
+    for (int i = 0; i < offsets.size(); i++) {
+      std::cout << offsets[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "SIZE: " << size << std::endl;
+  }
+
   struct GateParams<data_t> params;
   double ret;
 
