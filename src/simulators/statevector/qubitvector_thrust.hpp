@@ -2551,12 +2551,13 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   // After execution, update entanglement state
   update_entangled_state(qubits);
 
-  //TODO(delete)
-  // print states for debug
-  for (int i = 0; i < 32; i++) {
-    std::cout << m_Chunks[1].GetValue(i) << " ";
+  char* pDebug = getenv("QCDEBUG");
+  if (pDebug != NULL) {
+    for (int i = 0; i < 32; i++) {
+      std::cout << m_Chunks[1].GetValue(i) << " ";
+    }
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
 
 #ifdef AER_DEBUG
   if(func.Reduction())
