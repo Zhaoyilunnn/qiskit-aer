@@ -911,7 +911,7 @@ public:
   virtual uint_t num_qubits() const {return num_qubits_;}
 
   // Return the size of streams
-  uint_t streams_size() const {return sizeof(m_Streams) / sizeof(m_Streams[0]);}
+  uint_t streams_size() const {return m_Streams.size();}
 
   // Returns the size of the underlying n-qubit vector
   uint_t size() const {return data_size_;}
@@ -2424,7 +2424,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       std::vector<int> places(nGPUBuffer, iPlaceCPU);             // all buffers on GPU has chunk from CPU
       int nChunksOnGPU = 0;                                       // num chunks that are active on GPU
       int iStream = get_stream_id(iPlace);                                            // index of stream, currently using two streams
-      int num_streams = streams_size();                           // number of streams
+      int num_streams = AER_NUM_STREAM;                           // number of streams
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
       int num_exe = 0;
 
