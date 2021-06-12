@@ -1654,15 +1654,17 @@ void QubitVectorThrust<data_t>::destroy_streams()
 template <typename data_t>
 int QubitVectorThrust<data_t>::get_stream_id(int iDevice) const
 {
-  return stream_id_[iDevice];
+  // return the stream id in local gpu device
+  return stream_id_[iDevice] - iDevice*m_nDevParallel;
 }
 
 template <typename data_t>
 void QubitVectorThrust<data_t>::set_stream_id(int stream_id, int iDevice) const
 {
-  stream_id_[iDevice] = stream_id;
+  stream_id_[iDevice] = stream_id + m_nDevParallel*iDevice;
 }
 
+//TODO: delete this
 template <typename data_t>
 void QubitVectorThrust<data_t>::switch_stream(int &iStream, int iDevice) const
 {
@@ -2571,7 +2573,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                      chunkBits, 1, m_Streams[iStream]);
               }
               // Switch stream
-              switch_stream(iStream, iPlace);
+              iStream = (iStream + 1) / num_streams;
             }
           }
         }
