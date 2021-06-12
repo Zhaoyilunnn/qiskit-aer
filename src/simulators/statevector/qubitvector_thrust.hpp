@@ -946,6 +946,8 @@ public:
   // Set stream id
   void set_stream_id(int stream_id, int iDevice) const;
 
+  // Switch stream id
+  void switch_stream(int& iStream, int iDevice) const;
 
   // State initialization of a component
   // Initialize the specified qubits to a desired statevector
@@ -1653,6 +1655,14 @@ template <typename data_t>
 void QubitVectorThrust<data_t>::set_stream_id(int stream_id, int iDevice) const
 {
   stream_id_[iDevice] = stream_id;
+}
+
+template <typename data_t>
+void QubitVectorThrust<data_t>::switch_stream(int &iStream, int iDevice) const
+{
+  int dev_offs_id = iDevice * m_nDevParallel;
+  int tmp_stream_id = iStream - dev_offs_id;
+  iStream = dev_offs_id + ((tmp_stream_id + 1) % AER_NUM_STREAM);
 }
 
 //------------------------------------------------------------------------------
@@ -2549,7 +2559,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
                                      chunkBits, 1, m_Streams[iStream]);
               }
               // Switch stream
-              iStream = (iStream + 1) % num_streams; // current stream
+              switch_stream(iStream, iPlace);
             }
           }
         }
