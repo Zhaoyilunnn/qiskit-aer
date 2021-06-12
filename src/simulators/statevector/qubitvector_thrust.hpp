@@ -1385,7 +1385,6 @@ QubitVectorThrust<data_t>::QubitVectorThrust(size_t num_qubits) : num_qubits_(0)
 #endif
   if(num_qubits != 0){
     set_num_qubits(num_qubits);
-    create_streams();
   }
 }
 
@@ -1959,6 +1958,9 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
     m_Chunks[i].SetupP2P(m_nDevParallel);
   }
 #endif
+
+  //create_streams after m_nDevParallel is set
+  create_streams();
 
 #ifdef AER_TIMING
   TimeEnd(QS_GATE_INIT);
