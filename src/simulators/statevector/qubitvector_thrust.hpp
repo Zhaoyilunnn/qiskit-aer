@@ -1610,11 +1610,16 @@ void QubitVectorThrust<data_t>::create_streams()
 template <typename data_t>
 void QubitVectorThrust<data_t>::destroy_streams()
 {
+  char* pDebug = getenv("QCDEBUG");
   std::cout << "Destroying streams ..." << std::endl;
   int num_streams = AER_NUM_STREAM * m_nDevParallel;
   for (int i = 0; i < num_streams; i++) {
     // decide which device to handle stream
     int iDevice = i / AER_NUM_STREAM;
+    if (pDebug != NULL) {
+      std::cout << "iDevice: " << iDevice << " iStream: " << i << std::endl;
+      std::cout << "Stream Num: " << streams_size() << std::endl;
+    }
     cudaSetDevice(iDevice);
     cudaStreamSynchronize(m_Streams[i]);
   }
