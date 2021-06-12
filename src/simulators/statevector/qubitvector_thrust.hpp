@@ -1772,6 +1772,10 @@ public:
 template <typename data_t>
 void QubitVectorThrust<data_t>::zero()
 {
+  char* pDebug = getenv("QCDEBUG");
+  if (pDebug != NULL) {
+    std::cout << "filling zero..." << std::endl;
+  }
   thrust::complex<data_t> z = 0.0;
 
   reg_t qubits = {0};
@@ -1783,6 +1787,10 @@ void QubitVectorThrust<data_t>::zero()
 template <typename data_t>
 void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
 {
+  char* pDebug = getenv("QCDEBUG");
+  if (pDebug != NULL) {
+    std::cout << "setting num qubits..." << std::endl;
+  }
   size_t prev_num_qubits = num_qubits_;
   num_qubits_ = num_qubits;
   data_size_ = 1ull << num_qubits;
