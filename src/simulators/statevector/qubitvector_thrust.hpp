@@ -2073,7 +2073,7 @@ void QubitVectorThrust<data_t>::initialize()
   t = 1.0;
 
   if(m_globalIndex == 0){
-    m_Chunks[1].SetState(0,0,t,m_maxChunkBits);
+    m_Chunks[m_nPlaces-1].SetState(0,0,t,m_maxChunkBits);
     zero_ = true;
   }
 }
