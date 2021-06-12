@@ -1416,8 +1416,9 @@ QubitVectorThrust<data_t>::~QubitVectorThrust() {
       fclose(debug_fp);
   }
 #endif
-
-  destroy_streams();
+  if (num_qubits_ > 0) {
+    destroy_streams();
+  }
 }
 
 //------------------------------------------------------------------------------
