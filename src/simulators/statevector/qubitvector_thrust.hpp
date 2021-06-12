@@ -1894,7 +1894,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
   if(is < (m_localSize >> m_maxChunkBits)){ //all chunks are stored on host memory
     m_iPlaceHost = m_nDevParallel;
     // m_iPlaceHost = 0;
-    m_nPlaces = 2;  // statevector stored on Host memory
+    m_nPlaces = m_nDevParallel+1;  // statevector stored on Host memory
 
     m_Chunks[m_iPlaceHost].SetGlobalIndex(m_globalIndex + (is << m_maxChunkBits));
     m_Chunks[m_iPlaceHost].SetDevice(-1);
@@ -2430,6 +2430,11 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
 
           //control mask
           if ((baseChunk & controlMask) != controlFlag) {
+            continue;
+          }
+
+          //multi-gpu partition
+          if (iChunk % (m_nPlaces - 1) != iPlace) {
             continue;
           }
 
