@@ -941,7 +941,7 @@ public:
   void destroy_streams();
 
   // Get stream id
-  int get_stream_id() const;
+  int get_stream_id(int iDevice) const;
 
   // Set stream id
   void set_stream_id(int stream_id, int iDevice) const;
