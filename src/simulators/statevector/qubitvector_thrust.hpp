@@ -1392,7 +1392,7 @@ QubitVectorThrust<data_t>::QubitVectorThrust(size_t num_qubits) : num_qubits_(0)
 template <typename data_t>
 QubitVectorThrust<data_t>::QubitVectorThrust() : QubitVectorThrust(0)
 {
-  create_streams();
+//  create_streams();
 }
 
 template <typename data_t>
