@@ -1789,7 +1789,7 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
 {
   char* pDebug = getenv("QCDEBUG");
   if (pDebug != NULL) {
-    std::cout << "setting num qubits..." << std::endl;
+    std::cout << "setting num qubits: " << num_qubits << std::endl;
   }
   size_t prev_num_qubits = num_qubits_;
   num_qubits_ = num_qubits;
