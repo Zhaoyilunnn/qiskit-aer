@@ -387,7 +387,6 @@ template <class statevec_t>
 void State<statevec_t>::initialize_qreg(uint_t num_qubits) {
   initialize_omp();
   BaseState::qreg_.set_num_qubits(num_qubits);
-  BaseState::qreg_.create_streams();
   BaseState::qreg_.initialize();
   apply_global_phase();
 }
@@ -402,7 +401,6 @@ void State<statevec_t>::initialize_qreg(uint_t num_qubits,
   }
   initialize_omp();
   BaseState::qreg_.set_num_qubits(num_qubits);
-  BaseState::qreg_.create_streams();
   BaseState::qreg_.initialize_from_data(state.data(), 1ULL << num_qubits);
   apply_global_phase();
 }
@@ -416,7 +414,6 @@ void State<statevec_t>::initialize_qreg(uint_t num_qubits,
   }
   initialize_omp();
   BaseState::qreg_.set_num_qubits(num_qubits);
-  BaseState::qreg_.create_streams();
   BaseState::qreg_.initialize_from_vector(state);
   apply_global_phase();
 }
