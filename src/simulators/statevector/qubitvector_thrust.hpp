@@ -1598,10 +1598,13 @@ void QubitVectorThrust<data_t>::create_streams()
 {
   std::cout << "Creating streams ..." << std::endl;
   int num_streams = AER_NUM_STREAM * m_nDevParallel;
+
+  // init stream id for each device
   stream_id_.resize(m_nDevParallel, 0);
   for (int i = 0; i < m_nDevParallel; i++) {
     stream_id_[i] = i * AER_NUM_STREAM;
   }
+
   m_Streams.resize(num_streams);
   for (int i = 0; i < num_streams; i++) {
     // decide which device to create stream
@@ -2444,6 +2447,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       int num_streams = AER_NUM_STREAM;                           // number of streams
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
       int num_exe = 0;
+      int comp_cntr = -1;
 
       noDataExchange = 0;                                         // do not enable noDataExchange
       if (noDataExchange) { // qubits are all local, we don't need to copy chunk one by one
@@ -2491,7 +2495,8 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
 
           //multi-gpu partition
-          if (iChunk % (m_nPlaces - 1) != iPlace) {
+          ++comp_cntr;
+          if (comp_cntr % (m_nPlaces - 1) != iPlace) {
             continue;
           }
 
