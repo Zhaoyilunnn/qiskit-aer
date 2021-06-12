@@ -1855,6 +1855,10 @@ void QubitVectorThrust<data_t>::set_num_qubits(size_t num_qubits)
     }
   }
 
+  if (pDebug != NULL) {
+    std::cout << "m_nDevParallel: " << m_nDevParallel << " m_nDev: " << m_nDev << std::endl;
+  }
+
   str = getenv("AER_HOST_ONLY");
   if(str || m_nDev == 0){
     m_nDevParallel = 0;
