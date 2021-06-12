@@ -1618,7 +1618,7 @@ void QubitVectorThrust<data_t>::destroy_streams()
     int iDevice = i / AER_NUM_STREAM;
     if (pDebug != NULL) {
       std::cout << "iDevice: " << iDevice << " iStream: " << i << std::endl;
-      std::cout << "Stream Num: " << streams_size() << std::endl;
+      std::cout << "Stream Num: " << streams_size() << " Num Streams: " << num_streams << std::endl;
     }
     cudaSetDevice(iDevice);
     cudaStreamSynchronize(m_Streams[i]);
