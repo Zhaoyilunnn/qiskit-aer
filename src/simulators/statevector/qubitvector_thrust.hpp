@@ -1599,6 +1599,9 @@ void QubitVectorThrust<data_t>::create_streams()
   std::cout << "Creating streams ..." << std::endl;
   int num_streams = AER_NUM_STREAM * m_nDevParallel;
   stream_id_.resize(m_nDevParallel, 0);
+  for (int i = 0; i < m_nDevParallel; i++) {
+    stream_id_[i] = i * AER_NUM_STREAM;
+  }
   m_Streams.resize(num_streams);
   for (int i = 0; i < num_streams; i++) {
     // decide which device to create stream
