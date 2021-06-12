@@ -944,7 +944,7 @@ public:
   int get_stream_id() const;
 
   // Set stream id
-  void set_stream_id(int stream_id) const;
+  void set_stream_id(int stream_id, int iDevice) const;
 
 
   // State initialization of a component
@@ -1157,8 +1157,9 @@ protected:
   //-----------------------------------------------------------------------
   // Streams
   //-----------------------------------------------------------------------
-  cudaStream_t m_Streams[AER_NUM_STREAM];
-  mutable int stream_id_;
+//  cudaStream_t m_Streams[AER_NUM_STREAM];
+  std::vector<cudaStream_t> m_Streams;
+  mutable std::vector<int> stream_id_;
 
   mutable bool zero_;
 
@@ -1382,9 +1383,9 @@ QubitVectorThrust<data_t>::QubitVectorThrust(size_t num_qubits) : num_qubits_(0)
   debug_fp = NULL;
   debug_count = 0;
 #endif
-  create_streams();
   if(num_qubits != 0){
     set_num_qubits(num_qubits);
+    create_streams();
   }
 }
 
@@ -1594,36 +1595,46 @@ template <typename data_t>
 void QubitVectorThrust<data_t>::create_streams()
 {
   std::cout << "Creating streams ..." << std::endl;
-  int num_streams = AER_NUM_STREAM;
+  int num_streams = AER_NUM_STREAM * m_nDevParallel;
+  stream_id_.resize(m_nDevParallel, 0);
+  m_Streams.resize(num_streams);
   for (int i = 0; i < num_streams; i++) {
+    // decide which device to create stream
+    int iDevice = i / AER_NUM_STREAM;
+    cudaSetDevice(iDevice);
     cudaStreamCreate(&m_Streams[i]);
   }
-  stream_id_ = 0;
 }
 
 template <typename data_t>
 void QubitVectorThrust<data_t>::destroy_streams()
 {
   std::cout << "Destroying streams ..." << std::endl;
-  int num_streams = AER_NUM_STREAM;
+  int num_streams = AER_NUM_STREAM * m_nDevParallel;
   for (int i = 0; i < num_streams; i++) {
+    // decide which device to handle stream
+    int iDevice = i / AER_NUM_STREAM;
+    cudaSetDevice(iDevice);
     cudaStreamSynchronize(m_Streams[i]);
   }
   for (int i = 0; i < num_streams; i++) {
+    // decide which device to handle stream
+    int iDevice = i / AER_NUM_STREAM;
+    cudaSetDevice(iDevice);
     cudaStreamDestroy(m_Streams[i]);
   }
 }
 
 template <typename data_t>
-int QubitVectorThrust<data_t>::get_stream_id() const
+int QubitVectorThrust<data_t>::get_stream_id(int iDevice) const
 {
-  return stream_id_;
+  return stream_id_[iDevice];
 }
 
 template <typename data_t>
-void QubitVectorThrust<data_t>::set_stream_id(int stream_id) const
+void QubitVectorThrust<data_t>::set_stream_id(int stream_id, int iDevice) const
 {
-  stream_id_ = stream_id;
+  stream_id_[iDevice] = stream_id;
 }
 
 //------------------------------------------------------------------------------
@@ -2383,7 +2394,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
       reg_t chunkIDs(nGPUBuffer);
       std::vector<int> places(nGPUBuffer, iPlaceCPU);             // all buffers on GPU has chunk from CPU
       int nChunksOnGPU = 0;                                       // num chunks that are active on GPU
-      int iStream = get_stream_id();                                            // index of stream, currently using two streams
+      int iStream = get_stream_id(iPlace);                                            // index of stream, currently using two streams
       int num_streams = streams_size();                           // number of streams
       int nGPUBufferPerStream = nGPUBuffer / num_streams;         // number of streams
       int num_exe = 0;
@@ -2548,7 +2559,7 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
           }
         }
         // Update stream index
-        set_stream_id(iStream);
+        set_stream_id(iStream, iPlace);
       }
     }
   }
