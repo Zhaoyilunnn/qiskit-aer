@@ -1655,13 +1655,13 @@ template <typename data_t>
 int QubitVectorThrust<data_t>::get_stream_id(int iDevice) const
 {
   // return the stream id in local gpu device
-  return stream_id_[iDevice] - iDevice*m_nDevParallel;
+  return stream_id_[iDevice] - iDevice*AER_NUM_STREAM;
 }
 
 template <typename data_t>
 void QubitVectorThrust<data_t>::set_stream_id(int stream_id, int iDevice) const
 {
-  stream_id_[iDevice] = stream_id + m_nDevParallel*iDevice;
+  stream_id_[iDevice] = stream_id + AER_NUM_STREAM*iDevice;
 }
 
 //TODO: delete this
