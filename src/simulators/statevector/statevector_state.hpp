@@ -385,10 +385,16 @@ const stringmap_t<Snapshots> State<statevec_t>::snapshotset_(
 
 template <class statevec_t>
 void State<statevec_t>::initialize_qreg(uint_t num_qubits) {
+  char* pDebug = getenv("QCDEBUG");
+
   initialize_omp();
+  if (pDebug != NULL) std::cout << "init OpenMP successful!!" << std::endl;
   BaseState::qreg_.set_num_qubits(num_qubits);
+  if (pDebug != NULL) std::cout << "set num qubits successful!!" << std::endl;
   BaseState::qreg_.initialize();
+  if (pDebug != NULL) std::cout << "qreg initialize successful!!" << std::endl;
   apply_global_phase();
+  if (pDebug != NULL) std::cout << "apply global phase successful!!" << std::endl;
 }
 
 template <class statevec_t>
