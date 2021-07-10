@@ -288,19 +288,26 @@ template <typename data_t>
 void QubitVectorDeviceBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,
                                            uint_t size,int isDevice,cudaStream_t stream)
 {
+  char* pDebug = getenv("QCDEBUG");
+  cudaError_t err;
+
   if(isDevice){
     QubitVectorDeviceBuffer<data_t>* pSrcDev = (QubitVectorDeviceBuffer<data_t>*)pSrc;
 //    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
-    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+    err = cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
                     thrust::raw_pointer_cast(pSrcDev->Buffer().data()+srcPos),
                     size*sizeof(data_t),cudaMemcpyDeviceToHost,stream);
   }
   else{
     QubitVectorHostBuffer<data_t>* pSrcHost = (QubitVectorHostBuffer<data_t>*)pSrc;
 //    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
-    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+    err = cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
                     thrust::raw_pointer_cast(pSrcHost->Buffer().data()+srcPos),
                     size*sizeof(data_t),cudaMemcpyHostToDevice,stream);
+  }
+
+  if (err != cudaSuccess && pDebug != NULL) {
+    std::cout << "cudaMemcpyAsync Fail!! " << cudaGetErrorString(cudaGetLastError()) << std::endl;
   }
 }
 
@@ -320,20 +327,27 @@ template <typename data_t>
 void QubitVectorHostBuffer<data_t>::Copy(uint_t pos,QubitVectorBuffer<data_t>* pSrc,uint_t srcPos,
                                          uint_t size,int isDevice,cudaStream_t stream)
 {
+  char* pDebug = getenv("QCDEBUG");
+  cudaError_t err;
+
   if(isDevice){
     QubitVectorDeviceBuffer<data_t>* pSrcDev = (QubitVectorDeviceBuffer<data_t>*)pSrc;
 //    thrust::copy_n(pSrcDev->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
     //TODO: need revision if extends to multi-GPU
-    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+    err = cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
                     thrust::raw_pointer_cast(pSrcDev->Buffer().data()+srcPos),
                     size*sizeof(data_t),cudaMemcpyDeviceToHost,stream);
   }
   else{
     QubitVectorHostBuffer<data_t>* pSrcHost = (QubitVectorHostBuffer<data_t>*)pSrc;
 //    thrust::copy_n(pSrcHost->Buffer().begin() + srcPos,size,m_Buffer.begin() + pos);
-    cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
+    err = cudaMemcpyAsync(thrust::raw_pointer_cast(m_Buffer.data()+pos),
                     thrust::raw_pointer_cast(pSrcHost->Buffer().data()+srcPos),
                     size*sizeof(data_t),cudaMemcpyHostToDevice,stream);
+  }
+
+  if (err != cudaSuccess && pDebug != NULL) {
+    std::cout << "cudaMemcpyAsync Fail!! " << cudaGetErrorString(cudaGetLastError()) << std::endl;
   }
 }
 
@@ -1596,6 +1610,9 @@ AER::Vector<std::complex<data_t>> QubitVectorThrust<data_t>::move_to_vector() {
 template <typename data_t>
 void QubitVectorThrust<data_t>::create_streams()
 {
+  char* pDebug = getenv("QCDEBUG");
+  cudaError_t err;
+
   std::cout << "Creating streams ..." << std::endl;
   int num_streams = AER_NUM_STREAM * m_nDevParallel;
 
@@ -1610,15 +1627,20 @@ void QubitVectorThrust<data_t>::create_streams()
     // decide which device to create stream
     int iDevice = i / AER_NUM_STREAM;
 
-    char* pDebug = getenv("QCDEBUG");
     if (pDebug != NULL) {
       std::cout << "iDevice: " << iDevice << " iStream: " << i << std::endl;
       std::cout << "Stream Num: " << streams_size() << " Num Streams: " << num_streams << std::endl;
       std::cout << "Stream Size: " << m_Streams.size() << std::endl;
     }
 
-    cudaSetDevice(iDevice);
-    cudaStreamCreate(&m_Streams[i]);
+    err = cudaSetDevice(iDevice);
+    if (err != cudaSuccess && pDebug != NULL) {
+      std::cout << "cudaSetDevice Fail!! " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+    }
+    err = cudaStreamCreate(&m_Streams[i]);
+    if (err != cudaSuccess && pDebug != NULL) {
+      std::cout << "cudaStreamCreate Fail!! " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+    }
   }
 }
 
@@ -1626,6 +1648,8 @@ template <typename data_t>
 void QubitVectorThrust<data_t>::destroy_streams()
 {
   char *pDebug = getenv("QCDEBUG");
+  cudaError_t err;
+
   if (m_Streams.size() > 0) {
     std::cout << "Destroying streams ..." << std::endl;
     int num_streams = AER_NUM_STREAM * m_nDevParallel;
@@ -1640,7 +1664,10 @@ void QubitVectorThrust<data_t>::destroy_streams()
       }
 
       cudaSetDevice(iDevice);
-      cudaStreamSynchronize(m_Streams[i]);
+      err = cudaStreamSynchronize(m_Streams[i]);
+      if (err != cudaSuccess && pDebug != NULL) {
+        std::cout << "cudaStreamSynchronize Fail!! " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+      }
     }
     for (int i = 0; i < num_streams; i++) {
       // decide which device to handle stream
@@ -1653,7 +1680,10 @@ void QubitVectorThrust<data_t>::destroy_streams()
       }
 
       cudaSetDevice(iDevice);
-      cudaStreamDestroy(m_Streams[i]);
+      err = cudaStreamDestroy(m_Streams[i]);
+      if (err != cudaSuccess && pDebug != NULL) {
+        std::cout << "cudaStreamDestroy Fail!! " << cudaGetErrorString(cudaGetLastError()) << std::endl;
+      }
     }
   }
 }
@@ -2320,6 +2350,9 @@ template <typename data_t>
 template <typename Function>
 double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubits) const
 {
+  char* pDebug = getenv("QCDEBUG");
+  cudaError_t err;
+
   const size_t N = qubits.size();
   const int numCBits = func.NumControlBits();
   uint_t size,iChunk,nChunk,controlMask,controlFlag,exe_size;
@@ -2627,7 +2660,6 @@ double QubitVectorThrust<data_t>::apply_function(Function func,const reg_t &qubi
   // After execution, update entanglement state
   update_entangled_state(qubits);
 
-  char* pDebug = getenv("QCDEBUG");
   if (pDebug != NULL) {
     for (int i = 0; i < 32; i++) {
       std::cout << m_Chunks[1].GetValue(i) << " ";
